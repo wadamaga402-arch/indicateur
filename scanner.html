@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VolScope Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07130d;--card:#0d1f16;--card2:#11291d;--line:#1f4030;--txt:#e9f7ef;--mut:#86a594;--g:#2bea6a;--g2:#13b24a;--y:#ffd23a;--r:#ff3b4e;--o:#ff7a2f}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#07130d}}
+:root[data-theme="dark"]{--bg:#07130d}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:radial-gradient(ellipse at top,#0f2a1c,var(--bg) 60%) fixed;background-color:var(--bg);color:var(--txt);font-family:Poppins,system-ui,sans-serif}
+body{max-width:560px;margin:0 auto;padding:12px 16px 80px;overflow-x:hidden}
+button,select,input{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+.mono{font-family:"JetBrains Mono",monospace}
+header{display:flex;align-items:center;justify-content:space-between;padding:6px 0 14px}
+.logo{font-weight:800;font-size:22px;background:linear-gradient(90deg,var(--g),var(--y));-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+.logo small{display:block;font-size:9px;letter-spacing:3px;color:var(--mut);-webkit-text-fill-color:var(--mut);margin-top:3px}
+.conn{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;border:1px solid var(--line);border-radius:20px;padding:5px 10px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--r)}.dot.on{background:var(--g);box-shadow:0 0 8px var(--g)}
+.panel{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.field select{width:100%;background:#0a1912;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.price{text-align:center;padding:10px 0 4px}
+.price .lbl{font-size:11px;letter-spacing:2px;color:var(--mut);text-transform:uppercase}
+.price .val{font-family:"JetBrains Mono",monospace;font-size:42px;font-weight:700;color:var(--g);transition:color .2s}
+.price .val.dn{color:var(--r)}
+.price .dir{font-size:11px;letter-spacing:2px;color:var(--mut)}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sh .ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--y),var(--g));color:#06240f;font-weight:800}
+.sh b{font-size:15px;display:block}.sh small{font-size:10px;letter-spacing:2px;color:var(--mut)}
+.timer{margin-left:auto;width:42px;height:42px}
+.matrix{position:relative;height:150px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#04100a;display:none}
+.matrix canvas{width:100%;height:100%;display:block}
+.matrix .tag{position:absolute;top:8px;left:8px;font-size:10px;color:var(--g);font-family:"JetBrains Mono",monospace}
+.rec{border:1px solid var(--line);border-radius:14px;padding:14px;background:#081a10}
+.rec .top{display:flex;gap:12px;align-items:center}
+.digit{width:64px;height:64px;border-radius:14px;display:grid;place-items:center;font-size:32px;font-weight:800;color:#04210d;background:linear-gradient(135deg,#6dff9b,var(--g2));box-shadow:0 0 22px rgba(43,234,106,.45);flex:none}
+.digit.diff{background:linear-gradient(135deg,#ff8a95,var(--r));color:#2a0006;box-shadow:0 0 22px rgba(255,59,78,.45)}
+.rec .k{font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--g);text-transform:uppercase}
+.rec h3{font-size:17px;margin:2px 0}
+.rec h3 span{color:var(--g)}
+.rec p{font-size:12px;color:var(--mut);line-height:1.45}
+.meter{margin-top:12px}
+.meter .row{display:flex;justify-content:space-between;font-size:10px;color:var(--mut);letter-spacing:1px;text-transform:uppercase}
+.bar{height:8px;border-radius:6px;background:#0f2a1c;overflow:hidden;margin:5px 0}
+.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--g),var(--y),var(--o));transition:width .5s}
+.prog{margin-top:14px}
+.prog .bar i{background:linear-gradient(90deg,var(--g),var(--y))}
+.btn{width:100%;margin-top:10px;padding:13px;border-radius:14px;font-weight:700;color:#082211;background:linear-gradient(90deg,var(--g),var(--y));box-shadow:0 6px 20px rgba(43,234,106,.25)}
+.btn:disabled{opacity:.6}
+.sig-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sig-h b{font-size:15px}
+.seg{display:flex;gap:4px;background:#0a1912;border-radius:10px;padding:3px}
+.seg button{padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;color:var(--mut)}
+.seg button.on{background:var(--g2);color:#04210d}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts button{flex:1;padding:11px;border-radius:12px;font-weight:700;font-size:14px}
+.a-m{background:var(--g);color:#04210d}.a-d{background:var(--r);color:#fff}.a-s{border:1px solid var(--line)}
+.chk{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);margin:12px 0}
+.chk input{width:18px;height:18px;accent-color:var(--g)}
+.scard{border:1px solid var(--line);border-radius:14px;padding:14px;background:#081a10;display:none}
+.scard .hd{display:flex;justify-content:space-between;align-items:center}
+.scard .hd b{font-size:12px;letter-spacing:2px;color:var(--g);text-transform:uppercase}
+.live{font-size:10px;font-weight:800;color:#04210d;background:var(--g);border-radius:8px;padding:2px 8px}
+.scard .bd{display:flex;align-items:center;gap:16px;margin-top:12px}
+.scard .bd .digit{width:76px;height:76px;font-size:38px}
+.scard .bd .c small{display:block;font-size:10px;letter-spacing:2px;color:var(--mut);text-transform:uppercase}
+.scard .bd .c strong{font-size:30px;font-family:"JetBrains Mono",monospace}
+.scard .res{margin-top:10px;font-size:13px;font-weight:700}
+.win{color:var(--g)}.loss{color:var(--r)}
+.dbars{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;align-items:end;height:110px;margin-top:6px}
+.dbar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:9px;color:var(--mut)}
+.dbar i{display:block;width:100%;border-radius:5px 5px 2px 2px;background:#1e3d2c;min-height:3px}
+.dbar.top i{background:var(--g)}.dbar.low i{background:var(--r)}
+.dbar b{font-size:12px;color:var(--txt);margin-top:3px;font-family:"JetBrains Mono",monospace}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.st{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;background:#0a1912}
+.st b{display:block;font-size:18px;font-family:"JetBrains Mono",monospace}
+.st span{font-size:9px;letter-spacing:1px;color:var(--mut);text-transform:uppercase}
+.hist{max-height:200px;overflow:auto;margin-top:10px;font-size:12px}
+.hist div{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid var(--line)}
+.truth{border:1px solid #6b5a12;background:#1d1a08;color:#ffe9a3;border-radius:14px;padding:12px;font-size:12px;line-height:1.5;margin-bottom:14px}
+.overlay{position:fixed;inset:0;background:rgba(3,10,6,.88);display:none;place-items:center;z-index:30}
+.overlay.on{display:grid}
+.ov{text-align:center;padding:24px}
+.spin{width:70px;height:70px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--y);margin:0 auto 16px;animation:sp 1s linear infinite}
+.ov small{display:block;letter-spacing:3px;color:var(--y);font-size:11px;font-weight:700}
+.ov h3{margin:6px 0}.ov p{color:var(--mut);font-size:12px}
+.err{color:#ffb3bd;font-size:11px;margin-top:6px;font-family:"JetBrains Mono",monospace}
+a.lnk{color:var(--g);font-size:12px}
+.inp{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut);margin-top:8px;flex-wrap:wrap}
+.inp input{width:72px;background:#0a1912;border:1px solid var(--line);border-radius:8px;padding:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">VolScope Scanner<small>ANALYSE MATCHES / DIFFERS</small></div>
+  <div class="conn"><span class="dot" id="dot"></span><span id="connTxt">Connexion…</span></div>
+</header>
+
+<div class="panel">
+  <div class="field"><label>Volatility Index</label><select id="sym"></select></div>
+  <div class="field"><label>Timeframe</label><select id="win"><option value="100">100 ticks</option><option value="200" selected>200 ticks</option><option value="500">500 ticks</option><option value="1000">1000 ticks</option></select></div>
+  <div class="field" style="margin:0"><label>Trade Type</label><select id="tt"><option value="match">Matches / Differs — Matches</option><option value="diff">Matches / Differs — Differs</option></select></div>
+  <div class="price"><div class="lbl" id="pLbl">Volatility 100 (1s) Index</div><div class="val" id="pVal">—</div><div class="dir" id="pDir">EN ATTENTE DES TICKS</div></div>
+  <div class="err" id="err"></div>
+</div>
+
+<div class="panel">
+  <div class="sh"><div class="ic">⌁</div><div><b>Matches Signal Scanner</b><small>DEEP SCAN · 5S</small></div>
+    <svg class="timer" viewBox="0 0 42 42"><circle cx="21" cy="21" r="18" fill="none" stroke="var(--line)" stroke-width="3"/><circle id="tRing" cx="21" cy="21" r="18" fill="none" stroke="var(--g)" stroke-width="3" stroke-dasharray="113" stroke-dashoffset="113" transform="rotate(-90 21 21)"/><text id="tTxt" x="21" y="25" text-anchor="middle" font-size="10" fill="var(--txt)" font-family="JetBrains Mono">0.0</text></svg></div>
+  <div class="matrix" id="matrix"><canvas id="cv"></canvas><span class="tag" id="scanTag">SCAN 0%</span></div>
+  <div class="rec" id="rec">
+    <div class="top"><div class="digit" id="recD">–</div><div><div class="k">✦ Chiffre recommandé</div><h3 id="recH">Lance un scan</h3><p id="recP">Le scan analyse les derniers ticks réels de l'indice choisi.</p></div></div>
+    <div class="meter"><div class="row"><span>Fréquence observée</span><span id="fTxt">–</span></div><div class="bar"><i id="fBar" style="width:0"></i></div>
+    <div class="row"><span>Chance réelle de gagner</span><span id="pTxt">–</span></div><div class="bar"><i id="pBar" style="width:0;background:var(--y)"></i></div></div>
+  </div>
+  <div class="prog"><div class="row" style="display:flex;justify-content:space-between;font-size:11px;color:var(--mut)"><span id="progTxt">Prêt</span><span id="progPct">0%</span></div><div class="bar"><i id="progBar" style="width:0"></i></div></div>
+  <button class="btn" id="scanBtn">⛶ Scan market</button>
+</div>
+
+<div class="panel">
+  <div class="sig-h"><b>📡 Trading Signals</b><div class="seg"><button class="on" data-seg="match">Matches</button><button data-seg="diff">Differs</button></div></div>
+  <div class="acts"><button class="a-m" data-gen="match">↗ Matches</button><button class="a-d" data-gen="diff">↘ Differs</button><button class="a-s" data-gen="auto">✦ Signal</button></div>
+  <label class="chk"><input type="checkbox" id="auto"> Auto-generate every 30s</label>
+  <div class="scard" id="scard">
+    <div class="hd"><b id="sTitle">Matches signal</b><span class="live">LIVE</span></div>
+    <div class="mono" style="font-size:11px;color:var(--mut);margin-top:2px" id="sTime"></div>
+    <div class="bd"><div class="digit" id="sD">0</div><div class="c"><small>Chance réelle</small><strong id="sP">10%</strong><div style="font-size:11px;color:var(--mut)" id="sF"></div></div></div>
+    <div class="res" id="sRes">⏳ Résultat au prochain tick…</div>
+    <button class="btn" id="botBtn" style="margin-top:12px">⬇ Fichier Deriv Bot pour ce signal</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="sig-h"><b>📊 Distribution des chiffres</b><span class="mono" style="font-size:11px;color:var(--mut)" id="distN"></span></div>
+  <div class="dbars" id="dbars"></div>
+</div>
+
+<div class="panel">
+  <div class="sig-h"><b>🧾 Résultats réels de tes signaux</b><button class="a-s" style="font-size:11px;padding:4px 8px;border-radius:8px" id="reset">Reset</button></div>
+  <div class="stats">
+    <div class="st"><b id="nW" class="win">0</b><span>Gagnés</span></div>
+    <div class="st"><b id="nL" class="loss">0</b><span>Perdus</span></div>
+    <div class="st"><b id="pnl">0.00</b><span>Profit ($)</span></div>
+  </div>
+  <div class="inp">Mise <input type="number" id="stake" value="1" step="0.5" min="0.35"> $ · Gain Matches ×<input type="number" id="payM" value="7.33" step="0.01"> · Gain Differs ×<input type="number" id="payD" value="0.09" step="0.01"></div>
+  <div class="hist" id="hist"></div>
+</div>
+
+<div class="truth">⚠️ Les indices de volatilité Deriv sont tirés au hasard : chaque chiffre a ~10 % de chances de sortir, quel que soit le scan. Un site qui affiche « 98 % de confiance » sur Matches ne dit pas la vérité. Ici tu vois la vraie fréquence, la vraie chance de gagner, et le résultat réel de chaque signal.<br><a class="lnk" href="index.html">← Retour à VolScope</a></div>
+
+<div class="overlay" id="ov"><div class="ov"><div class="spin"></div><small>ANALYZING</small><h3>Analyse du marché Matches</h3><p>Lecture de la distribution des chiffres…</p></div></div>
+
+<script>
+const MK=[['R_10','Volatility 10 Index'],['1HZ10V','Volatility 10 (1s) Index'],['R_25','Volatility 25 Index'],['1HZ25V','Volatility 25 (1s) Index'],['R_50','Volatility 50 Index'],['1HZ50V','Volatility 50 (1s) Index'],['R_75','Volatility 75 Index'],['1HZ75V','Volatility 75 (1s) Index'],['R_100','Volatility 100 Index'],['1HZ100V','Volatility 100 (1s) Index']];
+const EP=['wss://api.derivws.com/trading/v1/options/ws/public','wss://ws.derivws.com/websockets/v3?app_id=1089','wss://ws.binaryws.com/websockets/v3?app_id=1089'];
+const $=id=>document.getElementById(id);
+const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let sym=ld('sc_sym','1HZ100V'), ws, ep=0, pip=2, prices=[], digits=[], live=false, subId=null, reqN=0, curReq=0, wd;
+let rec=null, sig=null, pending=null, hist=ld('sc_hist',[]), autoT=null;
+$('sym').innerHTML=MK.map(([s,n])=>`<option value="${s}" ${s===sym?'selected':''}>${n} · ${s}</option>`).join('');
+
+function dig(p){const s=Number(p).toFixed(pip);return +s[s.length-1]}
+function setConn(ok,t){$('dot').className='dot'+(ok?' on':'');$('connTxt').textContent=t}
+function connect(){
+  setConn(false,'Connexion…'); $('err').textContent='';
+  try{ws=new WebSocket(EP[ep])}catch(e){$('err').textContent='Erreur : '+e.message+(location.protocol==='file:'?'':' — ouvre ce site dans Safari/Chrome, pas dans une app qui bloque les connexions.');return next()}
+  wd=setTimeout(()=>{if(!live)next()},10000);
+  ws.onopen=()=>subscribe();
+  ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch(x){return}
+    if(d.error){$('err').textContent='Deriv : '+(d.error.message||d.error.code);return}
+    if(d.req_id&&d.req_id!==curReq)return;
+    if(d.history){pip=d.pip_size??pip;prices=d.history.prices.map(Number);digits=prices.map(dig);live=true;subId=d.subscription&&d.subscription.id;setConn(true,'LIVE · Deriv');renderPrice(0);renderDist()}
+    else if(d.tick&&d.tick.quote!=null&&(!d.tick.symbol||d.tick.symbol===sym)){if(d.tick.pip_size!=null)pip=d.tick.pip_size;const q=+d.tick.quote,prev=prices.at(-1);prices.push(q);digits.push(dig(q));if(prices.length>1200){prices.splice(0,200);digits.splice(0,200)}renderPrice(q>=prev?1:-1);onTick(q);renderDist()}
+  };
+  ws.onclose=()=>{clearTimeout(wd);setConn(false,'Reconnexion…');if(!live)next();else{live=false;setTimeout(connect,2500)}};
+}
+function next(){clearTimeout(wd);ep=(ep+1)%EP.length;try{ws.onclose=null;ws.close()}catch(e){}setTimeout(connect,800)}
+function subscribe(){
+  if(!ws||ws.readyState!==1)return;
+  if(subId){ws.send(JSON.stringify({forget:subId}));subId=null}
+  prices=[];digits=[];curReq=++reqN;
+  ws.send(JSON.stringify({ticks_history:sym,count:1000,end:'latest',style:'ticks',subscribe:1,req_id:curReq}));
+}
+function renderPrice(dir){
+  const n=MK.find(m=>m[0]===sym)[1];$('pLbl').textContent=n;
+  if(!prices.length)return;
+  $('pVal').textContent=prices.at(-1).toFixed(pip);
+  if(dir){$('pVal').className='val'+(dir<0?' dn':'');$('pDir').textContent=dir<0?'▼ TICKING DOWN':'▲ TICKING UP'}
+  else $('pDir').textContent='DERNIER CHIFFRE : '+digits.at(-1);
+}
+function freq(){const W=+$('win').value,d=digits.slice(-W),f=Array(10).fill(0);d.forEach(x=>f[x]++);return {f,n:d.length}}
+function renderDist(){
+  const {f,n}=freq(); if(!n)return; const mx=Math.max(...f),mn=Math.min(...f);
+  $('distN').textContent=n+' derniers ticks';
+  $('dbars').innerHTML=f.map((c,i)=>`<div class="dbar ${c===mx?'top':c===mn?'low':''}"><span>${(c/n*100).toFixed(1)}%</span><i style="height:${Math.max(3,c/mx*80)}%"></i><b>${i}</b></div>`).join('');
+}
+function pick(type){
+  const {f,n}=freq(); if(n<50)return null;
+  let i=0; f.forEach((c,k)=>{if(type==='match'?c>f[i]:c<f[i])i=k});
+  return {type,digit:i,fr:f[i]/n*100,n,prob:type==='match'?10:90};
+}
+/* ----- scan animation ----- */
+let scanning=false;
+function scan(){
+  if(scanning)return; if(digits.length<50){$('progTxt').textContent='En attente des ticks…';return}
+  scanning=true; $('scanBtn').disabled=true; $('matrix').style.display='block';
+  const cv=$('cv'),ctx=cv.getContext('2d'); cv.width=cv.clientWidth*2; cv.height=cv.clientHeight*2;
+  const cols=Math.floor(cv.width/22), y=Array(cols).fill(0).map(()=>Math.random()*-40);
+  const T=5000,t0=performance.now();
+  (function frame(t){
+    const p=Math.min(1,(t-t0)/T);
+    ctx.fillStyle='rgba(4,16,10,.25)';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.font='bold 22px JetBrains Mono';
+    y.forEach((v,i)=>{ctx.fillStyle=Math.random()<.1?'#ffd23a':'#2bea6a';ctx.fillText(digits[(i*7+Math.floor(v))%digits.length]??'0',i*22,v*22);y[i]=v*22>cv.height&&Math.random()>.95?0:v+1});
+    $('scanTag').textContent='SCAN '+Math.round(p*100)+'%';
+    $('progBar').style.width=(p*100)+'%';$('progPct').textContent=Math.round(p*100)+'%';
+    $('progTxt').textContent=p<1?'Scanning market… '+((T-(t-t0))/1000).toFixed(1)+'s':'Scan complete';
+    $('tRing').style.strokeDashoffset=113*(1-p);$('tTxt').textContent=((t-t0)/1000).toFixed(1);
+    if(p<1)return requestAnimationFrame(frame);
+    scanning=false;$('scanBtn').disabled=false;$('scanBtn').textContent='⛶ Re-scan market';$('matrix').style.display='none';
+    showRec(pick($('tt').value));
+  })(t0);
+}
+function showRec(r){
+  rec=r; if(!r)return;
+  const m=r.type==='match';
+  $('recD').textContent=r.digit;$('recD').className='digit'+(m?'':' diff');
+  $('recH').innerHTML=`Trade <span style="color:${m?'var(--g)':'var(--r)'}">${m?'MATCH':'DIFFER'} ${r.digit}</span>`;
+  $('recP').textContent=`Le chiffre ${r.digit} est sorti ${r.fr.toFixed(1)} % du temps sur les ${r.n} derniers ticks (${m?'le plus fréquent':'le moins fréquent'}). Ça ne change pas sa chance au prochain tick.`;
+  $('fTxt').textContent=r.fr.toFixed(1)+' %';$('fBar').style.width=Math.min(100,r.fr*5)+'%';
+  $('pTxt').textContent='≈ '+r.prob+' %';$('pBar').style.width=r.prob+'%';
+}
+/* ----- signals ----- */
+let seg='match';
+function gen(type){
+  if(type==='auto')type=seg;
+  const r=pick(type); if(!r){$('sRes').textContent='En attente des ticks…';return}
+  sig={...r,t:new Date(),startLen:digits.length}; pending=sig;
+  const m=type==='match';
+  $('scard').style.display='block';
+  $('sTitle').textContent=m?'Matches signal':'Differs signal';
+  $('sTime').textContent='⌁ '+sig.t.toLocaleTimeString('fr-FR')+' · '+MK.find(x=>x[0]===sym)[1];
+  $('sD').textContent=r.digit;$('sD').className='digit'+(m?'':' diff');
+  $('sP').textContent='≈ '+r.prob+' %';$('sF').textContent=`fréquence ${r.fr.toFixed(1)} % / ${r.n} ticks`;
+  $('sRes').className='res';$('sRes').textContent='⏳ Résultat au prochain tick…';
+}
+function onTick(q){
+  if(!pending)return;
+  const d=dig(q), m=pending.type==='match', win=m?d===pending.digit:d!==pending.digit;
+  const stake=+$('stake').value||1, pay=+(m?$('payM').value:$('payD').value)||0;
+  const pl=win?stake*pay:-stake;
+  hist.unshift({t:Date.now(),s:sym,type:pending.type,dg:pending.digit,out:d,win,pl});hist=hist.slice(0,300);sv('sc_hist',hist);
+  $('sRes').className='res '+(win?'win':'loss');
+  $('sRes').textContent=(win?'✔ GAGNÉ':'✘ PERDU')+` — chiffre sorti : ${d} (${pl>=0?'+':''}${pl.toFixed(2)} $)`;
+  pending=null; renderHist();
+}
+function renderHist(){
+  const w=hist.filter(h=>h.win).length,l=hist.length-w,p=hist.reduce((a,h)=>a+h.pl,0);
+  $('nW').textContent=w;$('nL').textContent=l;$('pnl').textContent=(p>=0?'+':'')+p.toFixed(2);$('pnl').className=p>=0?'win':'loss';
+  $('hist').innerHTML=hist.slice(0,60).map(h=>`<div><span>${new Date(h.t).toLocaleTimeString('fr-FR')} · ${h.s} · ${h.type==='match'?'Match':'Differ'} ${h.dg}</span><span class="${h.win?'win':'loss'}">→ ${h.out} ${h.win?'✔':'✘'} ${h.pl>=0?'+':''}${h.pl.toFixed(2)}</span></div>`).join('')||'<div style="color:var(--mut)">Aucun signal joué.</div>';
+}
+/* ----- bot file ----- */
+function botXml(s,digit,stake,ct){
+  return `<xml xmlns="http://www.w3.org/1999/xhtml" collection="false" is_dbot="true"><variables></variables>
+<block type="trade_definition" x="0" y="0"><statement name="TRADE_OPTIONS">
+<block type="trade_definition_market" deletable="false" movable="false"><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">${s}</field>
+<next><block type="trade_definition_tradetype" deletable="false" movable="false"><field name="TRADETYPECAT_LIST">digits</field><field name="TRADETYPE_LIST">matchesdiffers</field>
+<next><block type="trade_definition_contracttype" deletable="false" movable="false"><field name="TYPE_LIST">${ct}</field>
+<next><block type="trade_definition_candleinterval" deletable="false" movable="false"><field name="CANDLEINTERVAL_LIST">60</field>
+<next><block type="trade_definition_restartbuysell" deletable="false" movable="false"><field name="TIME_MACHINE_ENABLED">FALSE</field>
+<next><block type="trade_definition_restartonerror" deletable="false" movable="false"><field name="RESTARTONERROR">TRUE</field></block></next></block></next></block></next></block></next></block></next></block>
+</statement><statement name="SUBMARKET"><block type="trade_definition_tradeoptions"><mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+<field name="DURATIONTYPE_LIST">t</field><field name="CURRENCY_LIST">USD</field>
+<value name="DURATION"><shadow type="math_number_positive"><field name="NUM">1</field></shadow></value>
+<value name="AMOUNT"><shadow type="math_number_positive"><field name="NUM">${stake}</field></shadow></value>
+<value name="PREDICTION"><shadow type="math_number_positive"><field name="NUM">${digit}</field></shadow></value>
+</block></statement></block>
+<block type="before_purchase" x="0" y="560"><statement name="BEFOREPURCHASE_STACK"><block type="purchase"><field name="PURCHASE_LIST">${ct}</field></block></statement></block>
+<block type="after_purchase" x="720" y="0"></block></xml>`;
+}
+$('botBtn').onclick=()=>{
+  if(!sig)return; const ct=sig.type==='match'?'DIGITMATCH':'DIGITDIFF', stake=Math.max(0.35,+$('stake').value||1);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([botXml(sym,sig.digit,stake,ct)],{type:'application/xml'}));
+  a.download=`VolScope_${sig.type==='match'?'Matches':'Differs'}_${sym}_${sig.digit}.xml`;document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),1500);
+};
+/* ----- events ----- */
+$('sym').onchange=e=>{sym=e.target.value;sv('sc_sym',sym);live=false;pending=null;$('pVal').textContent='—';$('ov').classList.add('on');setTimeout(()=>$('ov').classList.remove('on'),1500);subscribe();renderPrice(0)};
+$('win').onchange=()=>renderDist();
+$('scanBtn').onclick=scan;
+document.querySelectorAll('[data-seg]').forEach(b=>b.onclick=()=>{seg=b.dataset.seg;document.querySelectorAll('[data-seg]').forEach(x=>x.classList.toggle('on',x===b))});
+document.querySelectorAll('[data-gen]').forEach(b=>b.onclick=()=>gen(b.dataset.gen));
+$('auto').onchange=e=>{clearInterval(autoT);if(e.target.checked){gen('auto');autoT=setInterval(()=>gen('auto'),30000)}};
+$('reset').onclick=()=>{hist=[];sv('sc_hist',hist);renderHist()};
+renderHist(); renderPrice(0); connect();
+</script>
+</body>
+</html>
