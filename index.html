@@ -171,7 +171,7 @@ dialog ol{padding-left:18px;margin:8px 0}
 </nav>
 
 <div class="offline" id="offline">Flux Deriv injoignable. Dans l'app Claude, la connexion est bloquée : utilise le site en ligne.
-<a class="btn" style="display:block;text-align:center;margin-top:10px;text-decoration:none" href="https://raw.githack.com/wadamaga402-arch/indicateur/main/index.html" target="_blank" rel="noopener">▶ Ouvrir le site en direct</a><div class="mono" id="diag" style="margin-top:6px;font-size:11px;opacity:.85"></div></div>
+<a class="btn" style="display:block;text-align:center;margin-top:10px;text-decoration:none" href="https://raw.githack.com/wadamaga402-arch/indicateur/ad03e1d3380c889caec76704e591db409cf322d3/index.html" target="_blank" rel="noopener">▶ Ouvrir le site en direct</a><div class="mono" id="diag" style="margin-top:6px;font-size:11px;opacity:.85"></div></div>
 
 <section id="topTitle">
   <h1 id="title">Volatility Predictions</h1>
@@ -192,6 +192,26 @@ dialog ol{padding-left:18px;margin:8px 0}
       </select></label>
   </div>
   <div id="detail"></div>
+</div>
+
+<div class="box" id="botBox">
+  <div class="kicker amber">● 🤖 Bot Matches pour Deriv</div>
+  <h3 style="font-size:15px;margin:6px 0 2px">Fichier bot prêt à importer</h3>
+  <p class="meta" style="text-align:left">Contrat <b>Matches</b> uniquement (jamais « Both »), 1 tick, 1 seul trade par Run.</p>
+  <div id="botCfg" style="margin-top:10px"></div>
+  <div class="row">
+    <label class="meta" style="margin:0;display:flex;align-items:center;gap:6px">Mise (USD)
+      <input type="number" id="botStake" min="0.35" step="0.01" value="1" style="width:80px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px"></label>
+    <label class="meta" style="margin:0;display:flex;align-items:center;gap:6px">Chiffre
+      <select id="botDigit" style="background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px"><option value="auto">Auto (analyse)</option><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label>
+  </div>
+  <div class="row"><button class="btn" id="botDl">⬇ Télécharger le bot Matches</button></div>
+  <details class="how" style="margin:12px 0 0"><summary>Comment l'importer dans Deriv Bot</summary><div><ol>
+    <li>Télécharge le fichier (il va dans « Fichiers » / Téléchargements).</li>
+    <li>Sur bot.deriv.com → <b>Créateur de bots</b> → icône <b>dossier</b> (Importer) → <b>Mon ordinateur / Local</b> → choisis le fichier <i>.xml</i>.</li>
+    <li>Vérifie : Contract Type = <b>Matches</b>, Prediction = le chiffre, Stake = ta mise.</li>
+    <li>Appuie sur <b>Run</b> : le bot fait 1 trade puis s'arrête. Pour un nouveau signal, change juste <b>Prediction</b> et relance.</li>
+  </ol></div></details>
 </div>
 
 <!-- signal ready / automation banner -->
@@ -449,7 +469,7 @@ function render(){
   const M=MODES[mode], arr=Object.values(st);
   const ordered=arr.filter(s=>!selected.size||selected.has(s.s)).sort((a,b)=>(b.pinned-a.pinned));
   $('chips').innerHTML=`<button class="chip ${selected.size?'':'on'}" data-chip="*">Tous</button>`+arr.map(s=>`<button class="chip ${selected.has(s.s)?'on':''}" data-chip="${s.s}">${s.n.replace('Volatility ','V')}</button>`).join('');
-  renderDetail();
+  renderDetail(); renderBot();
   $('cards').innerHTML=ordered.map(cardHTML).join('');
   $('cards').className='cards'+(view==='list'?' list':'');
 
@@ -519,6 +539,97 @@ function renderDetail(){
   </div>
   <div class="verdictBox ${a?'go':''}">${a?`<b>${M.label} : ${a.bot}</b> · ${a.info} · score ${a.conf}%<div class="row" style="margin-top:8px"><button class="trade" data-trade-now="${s.s}">TRADE NOW</button></div>`:`<b>${M.label} :</b> pas de déséquilibre net sur ces ${n} ticks. Attends ou change de marché.`}</div>`;
 }
+function botTarget(){
+  const sym=selected.size===1?[...selected][0]:(Object.values(st).find(s=>s.phase==='entry'&&s.sig&&s.sig.mode==='matches')||st['1HZ10V']).s;
+  const s=st[sym]; let digit=$('botDigit').value, why='choisi par toi';
+  if(digit==='auto'){
+    const d=s.digits.slice(-detailWin), f=Array(10).fill(0); d.forEach(x=>f[x]++);
+    let b=0; f.forEach((c,i)=>{if(c>f[b])b=i}); digit=String(b);
+    why=d.length?`le plus fréquent sur ${d.length} ticks (${(f[b]/d.length*100).toFixed(0)} %)`:'en attente des ticks';
+  }
+  const stake=Math.max(0.35,+$('botStake').value||1);
+  return {s,digit,why,stake};
+}
+function renderBot(){
+  const {s,digit,why,stake}=botTarget();
+  $('botCfg').innerHTML=`<div class="grid4" style="grid-template-columns:1fr 1fr">
+    <div class="stat"><b style="font-size:13px">${s.n}</b><span>Market</span></div>
+    <div class="stat"><b style="font-size:13px">Digits › Matches</b><span>Trade type</span></div>
+    <div class="stat g"><b style="font-size:13px">Matches</b><span>Contract type</span></div>
+    <div class="stat"><b style="font-size:13px">1 tick · ${stake.toFixed(2)} $</b><span>Duration · Stake</span></div>
+    <div class="stat a" style="grid-column:span 2"><b>${digit}</b><span>Prediction — ${why}</span></div></div>
+    ${selected.size===1?'':'<p class="meta" style="text-align:left;margin-top:6px">Astuce : choisis un seul marché en haut pour que le bot le cible.</p>'}`;
+}
+function botXml(sym,digit,stake){
+  return `<xml xmlns="http://www.w3.org/1999/xhtml" collection="false" is_dbot="true">
+  <variables></variables>
+  <block type="trade_definition" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">${sym}</field>
+        <next>
+          <block type="trade_definition_tradetype" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">matchesdiffers</field>
+            <next>
+              <block type="trade_definition_contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">DIGITMATCH</field>
+                <next>
+                  <block type="trade_definition_candleinterval" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions">
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <field name="CURRENCY_LIST">USD</field>
+        <value name="DURATION">
+          <shadow type="math_number_positive">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number_positive">
+            <field name="NUM">${stake}</field>
+          </shadow>
+        </value>
+        <value name="PREDICTION">
+          <shadow type="math_number_positive">
+            <field name="NUM">${digit}</field>
+          </shadow>
+        </value>
+      </block>
+    </statement>
+  </block>
+  <block type="before_purchase" x="0" y="560">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="purchase">
+        <field name="PURCHASE_LIST">DIGITMATCH</field>
+      </block>
+    </statement>
+  </block>
+  <block type="after_purchase" x="720" y="0"></block>
+</xml>`;
+}
 function renderJournal(){
   $('pJournal').innerHTML=journal.length?journal.slice(0,80).map(j=>`<div class="it"><span>${new Date(j.t).toLocaleTimeString('fr-FR')} · ${j.m}</span><span>${j.mode} <b class="mono">${j.pred}</b> → ${j.d} <span class="${j.win?'win':'loss'}">${j.win?'✔':'✘'}</span></span></div>`).join(''):'<div class="empty">Aucun signal joué pour le moment.</div>';
 }
@@ -554,6 +665,15 @@ $('analyzeNow').onclick=()=>{const list=Object.values(st).filter(s=>s.live&&(!se
   if(!list.length)return toast('Les ticks ne sont pas encore chargés…');
   list.forEach(s=>{if(s.phase==='analyzing'){s.end=0;s.manual=true;s.noSig=0}});
   toast(`Analyse lancée sur ${list.length} marché${list.length>1?'s':''}`);step()};
+$('botDl').onclick=()=>{
+  const {s,digit,stake}=botTarget();
+  const blob=new Blob([botXml(s.s,digit,stake)],{type:'application/xml'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`VolScope_Matches_${s.s}_chiffre${digit}.xml`; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+  toast(`Bot Matches ${s.n} · chiffre ${digit} · ${stake} $ téléchargé`);
+};
+$('botStake').onchange=()=>render(); $('botDigit').onchange=()=>render();
 $('winSel').onchange=e=>{detailWin=+e.target.value;render()};
 const bindSet=(id,k,num)=>{const el=$(id);if(el.type==='checkbox')el.checked=settings[k];else el.value=settings[k];
   el.onchange=()=>{settings[k]=el.type==='checkbox'?el.checked:(num?+el.value:el.value);save('vs_settings',settings)}};
