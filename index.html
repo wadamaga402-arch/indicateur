@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VolScope Predictions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#141010;--bg2:#1c1716;--card:#231d1b;--card2:#2a2321;--line:#3a312d;
+  --txt:#f4ede8;--mut:#9c8f88;--acc:#ffb020;--acc2:#ff8a00;--ok:#2bd94f;--okbg:#103a1a;
+  --bad:#ff3b57;--blue:#2a8cff;--mag:#e01ad6;--navy:#1d2a4a;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141010}}
+:root[data-theme="dark"]{--bg:#141010}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:Poppins,system-ui,sans-serif}
+body{max-width:560px;margin:0 auto;padding:0 12px 90px;overflow-x:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.mono{font-family:"JetBrains Mono",monospace}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:var(--bg);display:flex;align-items:center;gap:8px;padding:10px 0 8px}
+.logo{width:30px;height:30px;flex:none}
+.brand{font-weight:800;color:var(--acc);font-size:19px;letter-spacing:-.3px}
+.pill{margin-left:auto;display:flex;align-items:center;gap:6px;border:1.5px solid #2c5a33;border-radius:10px;padding:5px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.off{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.help{width:34px;height:34px;border-radius:50%;background:var(--acc);color:#3a2300;font-weight:800;flex:none}
+
+/* tabs */
+.tabs{position:sticky;top:52px;z-index:19;background:var(--bg);display:flex;gap:4px;padding:6px 0 10px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;padding:9px 14px;border-radius:12px;font-weight:600;font-size:14px;white-space:nowrap;color:var(--txt)}
+.tab.on{background:var(--acc);color:#4a2c00;box-shadow:0 4px 14px rgba(255,176,32,.35)}
+
+h1{font-size:25px;font-weight:800;letter-spacing:-.5px;margin-top:6px}
+.sub{color:var(--mut);font-size:13px;margin-top:2px}
+.viewtg{display:inline-flex;gap:2px;border:1px solid var(--line);border-radius:12px;padding:3px;margin:12px 0}
+.viewtg button{width:34px;height:30px;border-radius:9px;font-size:16px;color:var(--mut)}
+.viewtg button.on{background:var(--acc);color:#4a2c00}
+
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;border-radius:20px;padding:4px 10px}
+.tag.green{background:var(--okbg);color:var(--ok);border:1px solid #1f6b2e}
+.tag.amber{background:#3a2a0c;color:var(--acc);border:1px solid #6b4c12}
+.ready h3{font-size:15px;margin:10px 0 2px}
+.ready p{color:var(--mut);font-size:12px}
+.row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn{background:var(--acc);color:#4a2c00;font-weight:700;border-radius:12px;padding:10px 16px;font-size:14px}
+.link{color:var(--mut);font-size:12px;font-weight:600}
+.x{margin-left:auto;color:var(--mut);font-size:18px}
+
+details.how{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
+details.how summary{list-style:none;padding:12px 14px;font-weight:700;font-size:14px;cursor:pointer}
+details.how summary::-webkit-details-marker{display:none}
+details.how div{padding:0 14px 14px;color:var(--mut);font-size:13px;line-height:1.55}
+details.how ol{padding-left:18px}
+
+.kicker{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--ok)}
+.kicker.amber{color:var(--acc)}
+.status h2{font-size:17px;font-weight:700;margin:2px 0 10px}
+
+.stabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:10px}
+.stab{flex:1;padding:8px;font-size:13px;font-weight:600;color:var(--mut);border-bottom:2px solid transparent}
+.stab.on{color:var(--acc);border-color:var(--acc)}
+.badge{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:9px;background:var(--acc);color:#4a2c00;font-size:10px;font-weight:800;margin-left:4px;padding:0 4px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{border:1.5px solid var(--line);border-radius:12px;padding:10px;text-align:center;background:var(--bg2)}
+.stat b{display:block;font-size:22px;font-weight:800}
+.stat span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+.stat.a{border-color:var(--acc)}.stat.g{border-color:var(--ok);box-shadow:0 0 10px rgba(43,217,79,.25)}
+
+.jrn{max-height:260px;overflow:auto;font-size:12px}
+.jrn .it{display:flex;justify-content:space-between;gap:8px;padding:7px 2px;border-bottom:1px solid var(--line)}
+.win{color:var(--ok);font-weight:700}.loss{color:var(--bad);font-weight:700}
+.empty{color:var(--mut);font-size:12px;text-align:center;padding:12px}
+.al label{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:13px}
+.al input{width:20px;height:20px;accent-color:var(--acc)}
+
+.signals .ttl{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--mut);text-transform:uppercase;margin-bottom:8px}
+.sig{display:flex;align-items:center;gap:8px;background:#1d2a1d;border:1px solid #2e4d2e;border-radius:12px;padding:9px 10px;margin-bottom:6px;font-size:13px;font-weight:600}
+.sig .p{color:var(--acc);font-family:"JetBrains Mono",monospace}
+.trade{margin-left:auto;background:var(--ok);color:#06300f;font-weight:800;font-size:11px;letter-spacing:.5px;border-radius:20px;padding:5px 12px;box-shadow:0 0 12px rgba(43,217,79,.5)}
+
+.mhead{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 10px}
+.mhead h2{font-size:17px;font-weight:800}
+.mhead span{font-size:12px;color:var(--mut)}
+
+.cards{display:grid;grid-template-columns:1fr;gap:12px}
+.cards.list .card{min-height:0;display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 14px}
+.cards.list .center{margin:0;flex-direction:row;gap:12px}
+.cards.list .ball,.cards.list .hg{width:48px;height:48px;font-size:22px}
+.cards.list .bigt{font-size:13px}
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:18px;padding:16px;position:relative}
+.card.hot{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 22px rgba(255,176,32,.18)}
+.ch{display:flex;justify-content:space-between;align-items:flex-start}
+.ch h3{font-size:16px;font-weight:700}
+.ch small{display:block;color:var(--mut);font-family:"JetBrains Mono",monospace;font-size:11px}
+.live{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:800;color:var(--ok)}
+.pin{font-size:15px;opacity:.45;filter:grayscale(1)}
+.pin.on{opacity:1;filter:none}
+.center{display:flex;flex-direction:column;align-items:center;margin:14px 0 4px}
+.ball{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font-size:34px;font-weight:800;color:#fff;
+  background:radial-gradient(circle at 35% 30%,#6cb6ff,var(--blue) 55%,#1257c4);box-shadow:0 8px 24px rgba(42,140,255,.45);animation:pop .4s}
+.ball.E{background:radial-gradient(circle at 35% 30%,#7dff95,var(--ok) 55%,#119a2c);box-shadow:0 8px 24px rgba(43,217,79,.45)}
+.ball.O{background:radial-gradient(circle at 35% 30%,#ff7cf7,var(--mag) 55%,#9c0b94);box-shadow:0 8px 24px rgba(224,26,214,.45)}
+.ball.OU{background:radial-gradient(circle at 35% 30%,#ffd27a,var(--acc2) 55%,#c25e00);font-size:26px}
+.hg{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:var(--navy);border:2px dashed #3d5a96;font-size:30px}
+.hg span{display:inline-block;animation:flip 2s infinite}
+.conf{color:var(--acc);font-weight:700;font-size:13px;margin-top:10px}
+.bigt{color:var(--acc);font-weight:800;font-size:18px;letter-spacing:.3px;text-transform:uppercase;margin-top:2px;text-align:center}
+.meta{color:var(--mut);font-size:11px;margin-top:4px;text-align:center}
+.last{display:flex;gap:5px;justify-content:center;margin-top:10px}
+.last i{font-style:normal;width:22px;height:22px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-family:"JetBrains Mono",monospace}
+.last i.hl{border-color:var(--acc);color:var(--acc)}
+.res{position:absolute;right:14px;bottom:12px;font-size:11px;font-weight:800}
+
+/* rise/fall terminal */
+.ticker{display:flex;gap:16px;overflow:hidden;white-space:nowrap;font-size:12px;color:var(--mut);margin:4px 0 10px;mask-image:linear-gradient(90deg,#000 85%,transparent)}
+.ticker b{color:var(--txt)}
+.rf{display:flex;align-items:center;gap:14px;margin:14px 0 6px}
+.ring{width:58px;height:58px;flex:none}
+.dir{font-size:24px;font-weight:800}
+.dir.up{color:var(--ok)}.dir.dn{color:var(--bad)}
+.term3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.term3 .stat b{font-size:15px}
+
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(120px);background:var(--acc);color:#3a2300;font-weight:700;padding:12px 18px;border-radius:14px;transition:.3s;z-index:50;max-width:92vw;font-size:14px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.offline{background:#3a1218;border:1px solid #6b1f2b;color:#ffb3bd;border-radius:12px;padding:10px 12px;font-size:12px;margin-bottom:12px;display:none}
+.note{color:var(--mut);font-size:11px;line-height:1.5;margin-top:18px;text-align:center}
+
+dialog{margin:auto;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:18px;padding:18px;max-width:440px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog h3{margin-bottom:8px}
+dialog p,dialog li{font-size:13px;color:var(--mut);line-height:1.55}
+dialog ol{padding-left:18px;margin:8px 0}
+
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes flip{0%,40%{transform:rotate(0)}50%,90%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2a1d14"/><path d="M6 22 L9 11 L13.5 17 L16 8 L18.5 17 L23 11 L26 22 Z" fill="#ff3b57"/><rect x="6" y="23" width="20" height="3" rx="1.5" fill="#ffb020"/></svg>
+  <div class="brand">VolScope</div>
+  <div class="pill"><span class="dot off" id="connDot"></span><span id="connTxt">Connexion…</span></div>
+  <button class="help" id="helpBtn" aria-label="Aide">?</button>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-mode="matches">🎯 Matches</button>
+  <button class="tab" data-mode="evenodd">⚖️ Even / Odd</button>
+  <button class="tab" data-mode="overunder">🔢 Over / Under</button>
+  <button class="tab" data-mode="risefall">📈 Rise / Fall</button>
+</nav>
+
+<div class="offline" id="offline">Flux Deriv injoignable — reconnexion en cours… Si ça reste bloqué, cette page est ouverte dans un aperçu qui bloque les connexions externes : ouvre la version hébergée du site.</div>
+
+<section id="topTitle">
+  <h1 id="title">Volatility Predictions</h1>
+  <p class="sub" id="subtitle">Analyse des chiffres en temps réel sur tous les indices de volatilité</p>
+  <div class="ticker mono" id="ticker"></div>
+</section>
+
+<div class="viewtg"><button class="on" data-view="grid" aria-label="Grille">▦</button><button data-view="list" aria-label="Liste">☰</button></div>
+
+<!-- signal ready / automation banner -->
+<div class="box ready" id="readyBox"></div>
+
+<details class="how" id="howBox"><summary id="howTitle">🎯 Comment fonctionne Matches</summary><div id="howBody"></div></details>
+
+<!-- market status -->
+<div class="box status">
+  <div class="kicker" id="stKicker">● Market status</div>
+  <h2 id="stTitle">Waiting for the next entry</h2>
+  <div class="stabs">
+    <button class="stab on" data-st="stats">📊 Stats</button>
+    <button class="stab" data-st="journal">📒 Journal<span class="badge" id="jBadge" hidden>0</span></button>
+    <button class="stab" data-st="alerts">🔔 Alertes</button>
+  </div>
+  <div id="pStats" class="grid4">
+    <div class="stat a"><b id="sConf">–</b><span>Avg confidence</span></div>
+    <div class="stat" id="sLiveBox"><b id="sLive">0</b><span>Live entries</span></div>
+    <div class="stat"><b id="sAna">0</b><span>Analyzing</span></div>
+    <div class="stat"><b id="sStreak">0</b><span>Win streak</span></div>
+    <div class="stat"><b id="sWr">–</b><span>Taux réussite</span></div>
+    <div class="stat"><b id="sTot">0</b><span>Signaux joués</span></div>
+    <div class="stat"><b id="sBe">–</b><span>Seuil rentable</span></div>
+    <div class="stat" id="sPnlBox"><b id="sPnl">0.00 $</b><span>Profit net (1 $/trade)</span></div>
+  </div>
+  <p class="meta" id="verdict" style="margin-top:10px"></p>
+  <div id="pJournal" class="jrn" hidden></div>
+  <div id="pAlerts" class="al" hidden>
+    <label>Son à chaque signal <input type="checkbox" id="aSound" checked></label>
+    <label>Vibration (mobile) <input type="checkbox" id="aVib" checked></label>
+    <label>Seulement les marchés épinglés 📌 <input type="checkbox" id="aPinned"></label>
+    <label>Confiance minimale <select id="aMin" style="background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px"><option value="0">Toutes</option><option value="60">60 %</option><option value="65">65 %</option><option value="70">70 %</option></select></label>
+    <p class="meta" style="text-align:left;margin-top:10px">Gain net pour 1 $ misé (recopie les valeurs que Deriv affiche pour ton contrat) :</p>
+    <label>Matches <input type="number" step="0.01" id="pM" style="width:80px;height:auto;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px"></label>
+    <label>Even / Odd <input type="number" step="0.01" id="pE" style="width:80px;height:auto;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px"></label>
+    <label>Over / Under <input type="number" step="0.01" id="pO" style="width:80px;height:auto;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px"></label>
+    <label>Rise / Fall <input type="number" step="0.01" id="pR" style="width:80px;height:auto;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px"></label>
+    <button class="link" id="clearJ" style="margin-top:6px">🗑 Vider le journal</button>
+  </div>
+</div>
+
+<div class="box signals" id="sigBox">
+  <div class="ttl">Active trade signals</div>
+  <div id="sigList"></div>
+</div>
+
+<div class="mhead"><h2>All markets</h2><span id="feeds">0 live feeds</span></div>
+<div class="cards" id="cards"></div>
+
+<p class="note">Données : flux public de ticks Deriv (WebSocket). Les indices de volatilité sont générés aléatoirement : les « confiances » sont des statistiques sur les 100 derniers ticks, pas une garantie. Le journal enregistre le vrai résultat du tick suivant chaque signal — c'est lui qu'il faut regarder.</p>
+
+<div class="toast" id="toast"></div>
+
+<dialog id="helpDlg">
+  <h3>Utilisation avec Quantum Bot</h3>
+  <ol>
+    <li>Choisis le type de contrat en haut (Matches, Even/Odd, Over/Under, Rise/Fall).</li>
+    <li>Chaque marché analyse ses derniers ticks (sablier « NEXT PREDICTION IN… »).</li>
+    <li>Quand une prédiction sort, la carte affiche la boule + « ENTRY IN … » et le marché passe dans <b>Active trade signals</b>.</li>
+    <li>Appuie sur <b>TRADE NOW</b> : la prédiction est copiée et Deriv Bot s'ouvre.</li>
+    <li>Dans Deriv Bot : change la valeur de prédiction et le marché, puis <b>Run</b> (1 tick) avant la fin du compte à rebours.</li>
+  </ol>
+  <p>Le résultat réel (tick suivant) est noté dans l'onglet Journal. Dans Stats, compare « Taux réussite » au « Seuil rentable » : tant que la réussite reste en dessous, les signaux font perdre de l'argent.</p>
+  <div class="row"><button class="btn" onclick="helpDlg.close()">Compris</button></div>
+</dialog>
+
+<script>
+const MARKETS=[
+  {s:'R_10',n:'Volatility 10'},{s:'1HZ10V',n:'Volatility 10 (1s)'},
+  {s:'R_25',n:'Volatility 25'},{s:'1HZ25V',n:'Volatility 25 (1s)'},
+  {s:'R_50',n:'Volatility 50'},{s:'1HZ50V',n:'Volatility 50 (1s)'},
+  {s:'R_100',n:'Volatility 100'},{s:'1HZ100V',n:'Volatility 100 (1s)'}
+];
+const BOT_URL='https://dbot.deriv.com/';
+const WS_URL='wss://ws.derivws.com/websockets/v3?app_id=1089';
+const WINDOW=100, ENTRY_S=5;
+const MODES={
+  matches:{label:'Matches',icon:'🎯',title:'Volatility Predictions',sub:'Analyse des chiffres en temps réel sur tous les indices de volatilité',
+    how:'Le chiffre le plus fréquent sur les 100 derniers ticks est proposé. Contrat <b>Matches</b> : gagné si le dernier chiffre du tick suivant est exactement ce chiffre (gain élevé, probabilité de base 10 %).'},
+  evenodd:{label:'Even / Odd',icon:'⚖️',title:'Even / Odd Predictions',sub:'Déséquilibre pair / impair sur les 100 derniers ticks',
+    how:'Si 55 % ou plus des derniers chiffres sont pairs → <b>E</b> (Even). Si 55 % ou plus sont impairs → <b>O</b> (Odd). Contrat 1 tick.'},
+  overunder:{label:'Over / Under',icon:'🔢',title:'Over / Under Predictions',sub:'Répartition chiffres hauts (5-9) / bas (0-4)',
+    how:'Si les chiffres hauts dominent (≥ 56 %) → <b>Over 4</b>. Si les bas dominent → <b>Under 5</b>. Contrat 1 tick, barrière indiquée sur la boule.'},
+  risefall:{label:'Rise / Fall',icon:'📈',title:'Terminal Command Center',sub:'Moteur de momentum sur les 20 derniers mouvements de prix',
+    how:'Si 60 % ou plus des 20 derniers mouvements montent → <b>RISE</b>, s\'ils descendent → <b>FALL</b>. Contrat 1 tick.'}
+};
+
+let mode='matches', view='grid';
+const st={}; MARKETS.forEach(m=>st[m.s]={...m,digits:[],prices:[],pip:2,phase:'analyzing',end:Date.now()+rnd(3,9)*1000,sig:null,pinned:false,last:null,live:false});
+let journal=load('vs_journal',[]), settings=Object.assign({sound:true,vib:true,pinned:false,min:0,pay_matches:8,pay_evenodd:0.95,pay_overunder:0.95,pay_risefall:0.95},load('vs_settings',{}));
+const payOf=m=>+settings['pay_'+m]||0;
+let ws, connected=false, lastMsg=0;
+
+function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+const $=id=>document.getElementById(id);
+
+/* ---------- WebSocket ---------- */
+function connect(){
+  try{ws=new WebSocket(WS_URL)}catch(e){setConn(false);return setTimeout(connect,4000)}
+  ws.onopen=()=>{setConn(true);MARKETS.forEach((m,i)=>ws.send(JSON.stringify({ticks_history:m.s,count:1000,end:'latest',style:'ticks',subscribe:1,req_id:i+1})));};
+  ws.onmessage=e=>{
+    const d=JSON.parse(e.data); lastMsg=Date.now();
+    if(d.error){console.warn(d.error);return}
+    if(d.msg_type==='history'){
+      const s=st[d.echo_req.ticks_history]; if(!s)return;
+      s.pip=d.pip_size??s.pip; s.prices=d.history.prices.map(Number);
+      s.digits=s.prices.map(p=>dig(p,s.pip)); s.live=true; render();
+    }else if(d.msg_type==='tick'){
+      const t=d.tick,s=st[t.symbol]; if(!s)return;
+      if(t.pip_size!=null)s.pip=t.pip_size;
+      const q=Number(t.quote); s.prices.push(q); s.digits.push(dig(q,s.pip)); s.live=true;
+      if(s.prices.length>1200){s.prices.splice(0,200);s.digits.splice(0,200)}
+      onTick(s,q);
+    }
+  };
+  ws.onclose=()=>{setConn(false);setTimeout(connect,3000)};
+  ws.onerror=()=>{try{ws.close()}catch(e){}};
+}
+setInterval(()=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify({ping:1}))},25000);
+function dig(p,pip){const s=Number(p).toFixed(pip);return +s[s.length-1]}
+function setConn(ok){connected=ok;$('connDot').className='dot'+(ok?'':' off');$('connTxt').textContent=ok?'LIVE · Deriv':'Reconnexion…';$('offline').style.display=ok?'none':'block'}
+
+/* ---------- Analyse ---------- */
+function analyse(s){
+  const d=s.digits.slice(-WINDOW); if(d.length<50)return null;
+  const n=d.length;
+  if(mode==='matches'){
+    const f=Array(10).fill(0); d.forEach(x=>f[x]++);
+    let best=0; f.forEach((c,i)=>{if(c>f[best])best=i});
+    const pct=f[best]/n*100; if(pct<13)return null;
+    return {pred:String(best),bot:best,conf:Math.min(92,Math.round(50+(pct-10)*4)),info:`Fréq. ${pct.toFixed(0)} % sur ${n} ticks`,cls:''};
+  }
+  if(mode==='evenodd'){
+    const ev=d.filter(x=>x%2===0).length/n*100;
+    if(ev>=55)return {pred:'E',bot:'Even',conf:Math.round(ev),info:`${ev.toFixed(0)} % pairs`,cls:'E'};
+    if(ev<=45)return {pred:'O',bot:'Odd',conf:Math.round(100-ev),info:`${(100-ev).toFixed(0)} % impairs`,cls:'O'};
+    return null;
+  }
+  if(mode==='overunder'){
+    const hi=d.filter(x=>x>4).length/n*100;
+    if(hi>=56)return {pred:'O4',bot:'Over 4',conf:Math.round(hi),info:`${hi.toFixed(0)} % chiffres 5-9`,cls:'OU'};
+    if(hi<=44)return {pred:'U5',bot:'Under 5',conf:Math.round(100-hi),info:`${(100-hi).toFixed(0)} % chiffres 0-4`,cls:'OU'};
+    return null;
+  }
+  if(mode==='risefall'){
+    const p=s.prices.slice(-21); if(p.length<21)return null;
+    let up=0; for(let i=1;i<p.length;i++)if(p[i]>p[i-1])up++;
+    const u=up/20*100;
+    if(u>=60)return {pred:'RISE',bot:'Rise',conf:Math.round(u),info:`${up}/20 hausses`,cls:'up'};
+    if(u<=40)return {pred:'FALL',bot:'Fall',conf:Math.round(100-u),info:`${20-up}/20 baisses`,cls:'dn'};
+    return null;
+  }
+}
+function judge(sig,s,q){
+  const d=dig(q,s.pip);
+  switch(sig.mode){
+    case 'matches':return d===+sig.pred;
+    case 'evenodd':return sig.pred==='E'?d%2===0:d%2===1;
+    case 'overunder':return sig.pred==='O4'?d>4:d<5;
+    case 'risefall':return sig.pred==='RISE'?q>sig.entryPrice:q<sig.entryPrice;
+  }
+}
+function onTick(s,q){
+  if(s.phase==='pending'&&s.sig){
+    const win=judge(s.sig,s,q);
+    journal.unshift({t:Date.now(),m:s.n,mode:MODES[s.sig.mode].label,pred:s.sig.pred,conf:s.sig.conf,d:dig(q,s.pip),win,k:s.sig.mode,pnl:win?payOf(s.sig.mode):-1});
+    journal=journal.slice(0,300); save('vs_journal',journal);
+    s.last={win,until:Date.now()+6000};
+    s.sig=null; s.phase='analyzing'; s.end=Date.now()+rnd(8,12)*1000;
+  }
+  render();
+}
+function step(){
+  const now=Date.now();
+  for(const s of Object.values(st)){
+    if(!s.live)continue;
+    if(s.phase==='analyzing'&&now>=s.end){
+      const a=analyse(s);
+      if(a&&a.conf>=settings.min){
+        s.sig={...a,mode,entryPrice:s.prices.at(-1)}; s.phase='entry'; s.end=now+ENTRY_S*1000;
+        if(!settings.pinned||s.pinned)alertSig(s);
+      }else s.end=now+rnd(6,10)*1000;
+    }else if(s.phase==='entry'&&now>=s.end){
+      s.phase='pending'; s.sig.entryPrice=s.prices.at(-1); // résultat jugé au tick suivant
+    }
+  }
+  if(lastMsg&&now-lastMsg>15000&&connected){setConn(false);try{ws.close()}catch(e){}}
+  render();
+}
+
+/* ---------- Alerts ---------- */
+let actx;
+function alertSig(s){
+  if(settings.sound){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=880;g.gain.setValueAtTime(.15,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.35);o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+.35)}catch(e){}}
+  if(settings.vib&&navigator.vibrate)try{navigator.vibrate([80,40,80])}catch(e){}
+}
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
+function tradeNow(sym){
+  const s=st[sym]; if(!s.sig)return;
+  const txt=`${s.sig.bot}`;
+  try{navigator.clipboard&&navigator.clipboard.writeText(String(s.sig.mode==='matches'?s.sig.pred:txt))}catch(e){}
+  toast(`${s.n} → ${MODES[s.sig.mode].label} ${txt} · 1 tick (copié)`);
+  window.open(BOT_URL,'_blank','noopener');
+}
+
+/* ---------- Render ---------- */
+const HG='<div class="hg"><span>⏳</span></div>';
+function secs(s){return Math.max(0,Math.ceil((s.end-Date.now())/1000))}
+function ring(p,cls){const c=2*Math.PI*24,off=c*(1-p/100);const col=cls==='up'?'var(--ok)':cls==='dn'?'var(--bad)':'var(--blue)';
+  return `<svg class="ring" viewBox="0 0 58 58"><circle cx="29" cy="29" r="24" fill="none" stroke="var(--line)" stroke-width="5"/><circle cx="29" cy="29" r="24" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 29 29)"/><text x="29" y="33" text-anchor="middle" font-size="12" font-weight="700" fill="var(--txt)">${p}%</text></svg>`}
+
+function cardHTML(s){
+  const live=s.live?'<span>● LIVE</span>':'<span style="color:var(--mut)">…</span>';
+  const head=`<div class="ch"><div><h3>${s.n}</h3><small>${s.s}</small></div><div class="live"><button class="pin ${s.pinned?'on':''}" data-pin="${s.s}" aria-label="Épingler">📌</button>${live}</div></div>`;
+  const sig=s.sig, lastD=s.digits.slice(-6);
+  let body='';
+  if(mode==='risefall'){
+    let pct=0,dir='–',cls='';
+    const p=s.prices.slice(-21); if(p.length>1){let up=0;for(let i=1;i<p.length;i++)if(p[i]>p[i-1])up++;pct=Math.round(up/(p.length-1)*100)}
+    if(sig){dir=(sig.pred==='RISE'?'↑ ':'↓ ')+sig.pred;cls=sig.cls}else{dir=pct>=50?'↑ RISE':'↓ FALL';cls=pct>=50?'up':'dn'}
+    const shown=sig?sig.conf:Math.max(pct,100-pct);
+    const phase=s.phase==='analyzing'?`Phase : analyse (${secs(s)}s)`:s.phase==='entry'?`ENTRY IN ${secs(s)}S`:'Résultat au prochain tick…';
+    body=`<div class="rf">${ring(shown,cls)}<div><div class="dir ${cls}">${dir}</div><div class="meta" style="text-align:left">${phase}${sig?' · '+sig.info:''}</div></div></div>`;
+  }else if(s.phase==='analyzing'||!sig){
+    body=`<div class="center">${HG}<div class="conf">Analyse de ${Math.min(WINDOW,s.digits.length)} ticks</div><div class="bigt">Next prediction in ${secs(s)}s</div></div>`;
+  }else{
+    const t=s.phase==='entry'?`Entry in ${secs(s)}s`:'Résultat au prochain tick…';
+    body=`<div class="center"><div class="ball ${sig.cls}">${sig.pred}</div><div class="conf">Confidence: ${sig.conf}%</div><div class="bigt">${t}</div><div class="meta">${sig.info}</div></div>`;
+  }
+  const hl=sig&&mode==='matches'?+sig.pred:-1;
+  const last=`<div class="last">${lastD.map(x=>`<i class="${x===hl?'hl':''}">${x}</i>`).join('')}</div>`;
+  const res=s.last&&Date.now()<s.last.until?`<div class="res ${s.last.win?'win':'loss'}">${s.last.win?'✔ GAGNÉ':'✘ PERDU'}</div>`:'';
+  return `<div class="card ${s.phase!=='analyzing'&&sig?'hot':''}">${head}${body}${view==='grid'?last:''}${res}</div>`;
+}
+
+let lastStructure='';
+function render(){
+  const M=MODES[mode], arr=Object.values(st);
+  const ordered=arr.slice().sort((a,b)=>(b.pinned-a.pinned));
+  $('cards').innerHTML=ordered.map(cardHTML).join('');
+  $('cards').className='cards'+(view==='list'?' list':'');
+
+  const active=arr.filter(s=>s.phase==='entry'&&s.sig);
+  const analyzing=arr.filter(s=>s.live&&s.phase==='analyzing').length;
+  $('feeds').textContent=arr.filter(s=>s.live).length+' live feeds';
+
+  // ticker (terminal strip)
+  $('ticker').innerHTML=arr.filter(s=>s.prices.length).map(s=>`<span>${s.n.replace('Volatility','Vol')} : <b>${s.prices.at(-1).toFixed(s.pip)}</b></span>`).join('');
+
+  // ready banner
+  const rb=$('readyBox');
+  if(active.length){
+    const s=active.sort((a,b)=>b.sig.conf-a.sig.conf)[0];
+    rb.innerHTML=`<span class="tag green">● Signal ready</span><h3>${s.n} est prêt</h3><p>${M.label} ${s.sig.bot} · 1 tick · ouvre Quantum Bot avant la fin de l'entrée (${secs(s)}s)</p><div class="row"><button class="btn" data-trade="${s.s}">Execute with Quantum Bot</button><button class="link" data-help>Comment ?</button></div>`;
+  }else{
+    rb.innerHTML=`<span class="tag amber">● Automation</span><h3>Trade plus vite avec Quantum Bot</h3><p>Dès qu'un marché affiche TRADE NOW, ouvre Deriv Bot avec la prédiction copiée et lance le contrat 1 tick.</p><div class="row"><button class="btn" data-open>Set up Quantum Bot</button><button class="link" data-help>Comment ça marche</button></div>`;
+  }
+
+  // status
+  $('stKicker').textContent=active.length?'● Live entry':'● Market status';
+  $('stKicker').className='kicker'+(active.length?'':' amber');
+  $('stTitle').textContent=active.length?`${active.length} trade${active.length>1?'s':''} ${active.length>1?'sont prêts':'est prêt'} maintenant`:'Waiting for the next entry';
+  const confs=active.length?active.map(s=>s.sig.conf):journal.slice(0,20).map(j=>j.conf);
+  $('sConf').textContent=confs.length?Math.round(confs.reduce((a,b)=>a+b,0)/confs.length)+'%':'–';
+  $('sLive').textContent=active.length; $('sLiveBox').className='stat'+(active.length?' g':'');
+  $('sAna').textContent=analyzing;
+  const jm=journal.filter(j=>j.mode===M.label);
+  let streak=0; for(const j of jm){if(j.win)streak++;else break}
+  $('sStreak').textContent=streak;
+  $('sWr').textContent=jm.length?Math.round(jm.filter(j=>j.win).length/jm.length*100)+'%':'–';
+  $('sTot').textContent=jm.length;
+  const pay=payOf(mode), be=pay>0?100/(1+pay):0, wr=jm.length?jm.filter(j=>j.win).length/jm.length*100:null;
+  const pnl=jm.reduce((a,j)=>a+(j.win?pay:-1),0);
+  $('sBe').textContent=be?be.toFixed(1)+'%':'–';
+  $('sPnl').textContent=(pnl>=0?'+':'')+pnl.toFixed(2)+' $';
+  $('sPnl').style.color=pnl>0?'var(--ok)':pnl<0?'var(--bad)':'';
+  $('verdict').innerHTML=wr==null?`Il faut gagner plus de <b>${be.toFixed(1)} %</b> des trades ${M.label} pour être rentable.`
+    :jm.length<50?`${jm.length} signaux : trop peu pour conclure (vise 50+). Réussite ${wr.toFixed(0)} % vs seuil ${be.toFixed(1)} %.`
+    :wr>be?`Réussite ${wr.toFixed(1)} % > seuil ${be.toFixed(1)} % sur ${jm.length} signaux — continue à vérifier, ça peut être de la chance.`
+    :`Réussite ${wr.toFixed(1)} % < seuil ${be.toFixed(1)} % sur ${jm.length} signaux : ces signaux perdent de l'argent.`;
+  $('jBadge').hidden=!journal.length; $('jBadge').textContent=journal.length;
+
+  // signals list
+  $('sigList').innerHTML=active.length?active.map(s=>`<div class="sig"><span class="dot"></span>${s.n} <span class="p">${s.sig.pred}</span> <span style="color:var(--mut);font-size:11px">${secs(s)}s</span><button class="trade" data-trade="${s.s}">TRADE NOW</button></div>`).join(''):'<div class="empty">Aucun signal actif — analyse en cours…</div>';
+
+  if(!$('pJournal').hidden)renderJournal();
+}
+function renderJournal(){
+  $('pJournal').innerHTML=journal.length?journal.slice(0,80).map(j=>`<div class="it"><span>${new Date(j.t).toLocaleTimeString('fr-FR')} · ${j.m}</span><span>${j.mode} <b class="mono">${j.pred}</b> → ${j.d} <span class="${j.win?'win':'loss'}">${j.win?'✔':'✘'}</span></span></div>`).join(''):'<div class="empty">Aucun signal joué pour le moment.</div>';
+}
+function setModeUI(){
+  const M=MODES[mode];
+  $('title').textContent=M.title; $('subtitle').textContent=M.sub;
+  $('ticker').style.display=mode==='risefall'?'flex':'none';
+  $('howTitle').textContent=`${M.icon} Comment fonctionne ${M.label}`;
+  $('howBody').innerHTML=`<p>${M.how}</p><ol style="margin-top:8px"><li>Attends que la carte passe de ⏳ à la boule de prédiction.</li><li>Appuie sur <b>TRADE NOW</b> pendant « ENTRY IN ».</li><li>Dans Deriv Bot : change la prédiction + le marché, puis Run.</li></ol>`;
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-mode],[data-view],[data-st],[data-pin],[data-trade],[data-help],[data-open]'); if(!t)return;
+  if(t.dataset.mode){mode=t.dataset.mode;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b===t));
+    Object.values(st).forEach(s=>{s.sig=null;s.phase='analyzing';s.end=Date.now()+rnd(2,6)*1000});setModeUI();render()}
+  else if(t.dataset.view){view=t.dataset.view;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b===t));render()}
+  else if(t.dataset.st){document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('on',b===t));
+    $('pStats').hidden=t.dataset.st!=='stats';$('pJournal').hidden=t.dataset.st!=='journal';$('pAlerts').hidden=t.dataset.st!=='alerts';render()}
+  else if(t.dataset.pin){st[t.dataset.pin].pinned=!st[t.dataset.pin].pinned;save('vs_pins',Object.values(st).filter(s=>s.pinned).map(s=>s.s));render()}
+  else if(t.dataset.trade)tradeNow(t.dataset.trade);
+  else if('help' in t.dataset)$('helpDlg').showModal();
+  else if('open' in t.dataset)window.open(BOT_URL,'_blank','noopener');
+});
+$('helpBtn').onclick=()=>$('helpDlg').showModal();
+const bindSet=(id,k,num)=>{const el=$(id);if(el.type==='checkbox')el.checked=settings[k];else el.value=settings[k];
+  el.onchange=()=>{settings[k]=el.type==='checkbox'?el.checked:(num?+el.value:el.value);save('vs_settings',settings)}};
+bindSet('aSound','sound');bindSet('aVib','vib');bindSet('aPinned','pinned');bindSet('aMin','min',true);
+bindSet('pM','pay_matches',true);bindSet('pE','pay_evenodd',true);bindSet('pO','pay_overunder',true);bindSet('pR','pay_risefall',true);
+$('clearJ').onclick=()=>{journal=[];save('vs_journal',journal);renderJournal();render()};
+load('vs_pins',[]).forEach(s=>{if(st[s])st[s].pinned=true});
+
+setModeUI(); render(); connect(); setInterval(step,500);
+</script>
+</body>
+</html>
