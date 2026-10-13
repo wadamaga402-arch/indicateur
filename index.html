@@ -127,6 +127,18 @@ details.how ol{padding-left:18px}
 .term3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
 .term3 .stat b{font-size:15px}
 
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1.5px solid var(--line);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:600;background:var(--bg2)}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#4a2c00}
+.dbars{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;align-items:end;height:110px;margin-top:14px}
+.dbar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10px;color:var(--mut)}
+.dbar i{display:block;width:100%;border-radius:5px 5px 2px 2px;background:var(--line);min-height:3px}
+.dbar.top i{background:var(--acc)}.dbar.low i{background:var(--bad);opacity:.7}
+.dbar b{font-size:12px;color:var(--txt);margin-top:3px;font-family:"JetBrains Mono",monospace}
+.split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:12px}
+.split .stat b{font-size:14px}
+.verdictBox{margin-top:12px;border-radius:12px;padding:12px;background:var(--bg2);border:1px solid var(--line);font-size:13px}
+.verdictBox.go{border-color:var(--ok);background:#12261a}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(120px);background:var(--acc);color:#3a2300;font-weight:700;padding:12px 18px;border-radius:14px;transition:.3s;z-index:50;max-width:92vw;font-size:14px}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .offline{background:#3a1218;border:1px solid #6b1f2b;color:#ffb3bd;border-radius:12px;padding:10px 12px;font-size:12px;margin-bottom:12px;display:none}
@@ -167,6 +179,19 @@ dialog ol{padding-left:18px;margin:8px 0}
 </section>
 
 <div class="viewtg"><button class="on" data-view="grid" aria-label="Grille">▦</button><button data-view="list" aria-label="Liste">☰</button></div>
+
+<div class="box" id="pickBox">
+  <div class="kicker amber">● Choisis ton marché</div>
+  <div class="chips" id="chips"></div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="analyzeNow">🔍 Analyser maintenant</button>
+    <label class="meta" style="margin:0;display:flex;align-items:center;gap:6px">Sur
+      <select id="winSel" style="background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px">
+        <option value="50">50 ticks</option><option value="100" selected>100 ticks</option><option value="500">500 ticks</option><option value="1000">1000 ticks</option>
+      </select></label>
+  </div>
+  <div id="detail"></div>
+</div>
 
 <!-- signal ready / automation banner -->
 <div class="box ready" id="readyBox"></div>
@@ -254,7 +279,7 @@ const MODES={
     how:'Si 60 % ou plus des 20 derniers mouvements montent → <b>RISE</b>, s\'ils descendent → <b>FALL</b>. Contrat 1 tick.'}
 };
 
-let mode='matches', view='grid';
+let mode='matches', view='grid', selected=new Set(load('vs_sel',[])), detailWin=100, manualMsg=null;
 const st={}; MARKETS.forEach(m=>st[m.s]={...m,digits:[],prices:[],pip:2,phase:'analyzing',end:Date.now()+rnd(3,9)*1000,sig:null,pinned:false,last:null,live:false});
 let journal=load('vs_journal',[]), settings=Object.assign({sound:true,vib:true,pinned:false,min:0,pay_matches:8,pay_evenodd:0.95,pay_overunder:0.95,pay_risefall:0.95},load('vs_settings',{}));
 const payOf=m=>+settings['pay_'+m]||0;
@@ -305,7 +330,7 @@ function setConn(ok){connected=ok;$('connDot').className='dot'+(ok?'':' off');$(
 
 /* ---------- Analyse ---------- */
 function analyse(s){
-  const d=s.digits.slice(-WINDOW); if(d.length<50)return null;
+  const d=s.digits.slice(-detailWin); if(d.length<50)return null;
   const n=d.length;
   if(mode==='matches'){
     const f=Array(10).fill(0); d.forEach(x=>f[x]++);
@@ -361,8 +386,9 @@ function step(){
       const a=analyse(s);
       if(a&&a.conf>=settings.min){
         s.sig={...a,mode,entryPrice:s.prices.at(-1)}; s.phase='entry'; s.end=now+ENTRY_S*1000;
-        if(!settings.pinned||s.pinned)alertSig(s);
-      }else s.end=now+rnd(6,10)*1000;
+        if((!settings.pinned||s.pinned)&&(!selected.size||selected.has(s.s)))alertSig(s);
+      }else{s.end=now+rnd(6,10)*1000; if(s.manual)s.noSig=now+5000;}
+      s.manual=false;
     }else if(s.phase==='entry'&&now>=s.end){
       s.phase='pending'; s.sig.entryPrice=s.prices.at(-1); // résultat jugé au tick suivant
     }
@@ -405,7 +431,8 @@ function cardHTML(s){
     const phase=s.phase==='analyzing'?`Phase : analyse (${secs(s)}s)`:s.phase==='entry'?`ENTRY IN ${secs(s)}S`:'Résultat au prochain tick…';
     body=`<div class="rf">${ring(shown,cls)}<div><div class="dir ${cls}">${dir}</div><div class="meta" style="text-align:left">${phase}${sig?' · '+sig.info:''}</div></div></div>`;
   }else if(s.phase==='analyzing'||!sig){
-    body=`<div class="center">${HG}<div class="conf">Analyse de ${Math.min(WINDOW,s.digits.length)} ticks</div><div class="bigt">Next prediction in ${secs(s)}s</div></div>`;
+    const ns=s.noSig&&Date.now()<s.noSig;
+    body=`<div class="center">${HG}<div class="conf">${ns?'Pas de signal clair pour l\'instant':'Analyse de '+Math.min(detailWin,s.digits.length)+' ticks'}</div><div class="bigt">Next prediction in ${secs(s)}s</div></div>`;
   }else{
     const t=s.phase==='entry'?`Entry in ${secs(s)}s`:'Résultat au prochain tick…';
     body=`<div class="center"><div class="ball ${sig.cls}">${sig.pred}</div><div class="conf">Confidence: ${sig.conf}%</div><div class="bigt">${t}</div><div class="meta">${sig.info}</div></div>`;
@@ -419,12 +446,15 @@ function cardHTML(s){
 let lastStructure='';
 function render(){
   const M=MODES[mode], arr=Object.values(st);
-  const ordered=arr.slice().sort((a,b)=>(b.pinned-a.pinned));
+  const ordered=arr.filter(s=>!selected.size||selected.has(s.s)).sort((a,b)=>(b.pinned-a.pinned));
+  $('chips').innerHTML=`<button class="chip ${selected.size?'':'on'}" data-chip="*">Tous</button>`+arr.map(s=>`<button class="chip ${selected.has(s.s)?'on':''}" data-chip="${s.s}">${s.n.replace('Volatility ','V')}</button>`).join('');
+  renderDetail();
   $('cards').innerHTML=ordered.map(cardHTML).join('');
   $('cards').className='cards'+(view==='list'?' list':'');
 
-  const active=arr.filter(s=>s.phase==='entry'&&s.sig);
-  const analyzing=arr.filter(s=>s.live&&s.phase==='analyzing').length;
+  const vis=s=>!selected.size||selected.has(s.s);
+  const active=arr.filter(s=>vis(s)&&s.phase==='entry'&&s.sig);
+  const analyzing=arr.filter(s=>vis(s)&&s.live&&s.phase==='analyzing').length;
   $('feeds').textContent=arr.filter(s=>s.live).length+' live feeds';
 
   // ticker (terminal strip)
@@ -468,6 +498,26 @@ function render(){
 
   if(!$('pJournal').hidden)renderJournal();
 }
+function renderDetail(){
+  const el=$('detail');
+  if(selected.size!==1){el.innerHTML=`<p class="meta" style="text-align:left;margin-top:10px">${selected.size?'Choisis un seul marché pour voir son analyse détaillée.':'Touche un marché pour l\'analyser en détail. « Tous » affiche les 8.'}</p>`;return}
+  const s=st[[...selected][0]], d=s.digits.slice(-detailWin), n=d.length;
+  if(n<20){el.innerHTML='<p class="meta">Chargement des ticks…</p>';return}
+  const f=Array(10).fill(0); d.forEach(x=>f[x]++);
+  const mx=Math.max(...f), mn=Math.min(...f);
+  const ev=d.filter(x=>x%2===0).length/n*100, hi=d.filter(x=>x>4).length/n*100;
+  const p=s.prices.slice(-21); let up=0; for(let i=1;i<p.length;i++)if(p[i]>p[i-1])up++;
+  const upP=p.length>1?up/(p.length-1)*100:50;
+  const a=analyse(s), M=MODES[mode];
+  el.innerHTML=`<div style="margin-top:14px;font-weight:700">${s.n} <span class="meta">· ${n} derniers ticks · prix ${s.prices.at(-1).toFixed(s.pip)}</span></div>
+  <div class="dbars">${f.map((c,i)=>`<div class="dbar ${c===mx?'top':c===mn?'low':''}"><span>${(c/n*100).toFixed(0)}%</span><i style="height:${Math.max(3,c/mx*80)}%"></i><b>${i}</b></div>`).join('')}</div>
+  <div class="split">
+    <div class="stat"><b>${ev.toFixed(0)}% / ${(100-ev).toFixed(0)}%</b><span>Pair / Impair</span></div>
+    <div class="stat"><b>${hi.toFixed(0)}% / ${(100-hi).toFixed(0)}%</b><span>5-9 / 0-4</span></div>
+    <div class="stat"><b>${upP.toFixed(0)}% / ${(100-upP).toFixed(0)}%</b><span>Hausse / Baisse</span></div>
+  </div>
+  <div class="verdictBox ${a?'go':''}">${a?`<b>${M.label} : ${a.bot}</b> · ${a.info} · score ${a.conf}%<div class="row" style="margin-top:8px"><button class="trade" data-trade-now="${s.s}">TRADE NOW</button></div>`:`<b>${M.label} :</b> pas de déséquilibre net sur ces ${n} ticks. Attends ou change de marché.`}</div>`;
+}
 function renderJournal(){
   $('pJournal').innerHTML=journal.length?journal.slice(0,80).map(j=>`<div class="it"><span>${new Date(j.t).toLocaleTimeString('fr-FR')} · ${j.m}</span><span>${j.mode} <b class="mono">${j.pred}</b> → ${j.d} <span class="${j.win?'win':'loss'}">${j.win?'✔':'✘'}</span></span></div>`).join(''):'<div class="empty">Aucun signal joué pour le moment.</div>';
 }
@@ -481,8 +531,14 @@ function setModeUI(){
 
 /* ---------- Events ---------- */
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-mode],[data-view],[data-st],[data-pin],[data-trade],[data-help],[data-open]'); if(!t)return;
-  if(t.dataset.mode){mode=t.dataset.mode;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b===t));
+  const t=e.target.closest('[data-mode],[data-view],[data-st],[data-pin],[data-trade],[data-trade-now],[data-chip],[data-help],[data-open]'); if(!t)return;
+  if(t.dataset.chip){const c=t.dataset.chip;
+    if(c==='*')selected.clear();else selected.has(c)?selected.delete(c):selected.add(c);
+    save('vs_sel',[...selected]);render()}
+  else if(t.dataset.tradeNow){const s=st[t.dataset.tradeNow],a=analyse(s);if(!a)return;
+    try{navigator.clipboard&&navigator.clipboard.writeText(String(mode==='matches'?a.pred:a.bot))}catch(x){}
+    toast(`${s.n} → ${MODES[mode].label} ${a.bot} · 1 tick (copié)`);window.open(BOT_URL,'_blank','noopener')}
+  else if(t.dataset.mode){mode=t.dataset.mode;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b===t));
     Object.values(st).forEach(s=>{s.sig=null;s.phase='analyzing';s.end=Date.now()+rnd(2,6)*1000});setModeUI();render()}
   else if(t.dataset.view){view=t.dataset.view;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b===t));render()}
   else if(t.dataset.st){document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('on',b===t));
@@ -493,6 +549,11 @@ document.addEventListener('click',e=>{
   else if('open' in t.dataset)window.open(BOT_URL,'_blank','noopener');
 });
 $('helpBtn').onclick=()=>$('helpDlg').showModal();
+$('analyzeNow').onclick=()=>{const list=Object.values(st).filter(s=>s.live&&(!selected.size||selected.has(s.s)));
+  if(!list.length)return toast('Les ticks ne sont pas encore chargés…');
+  list.forEach(s=>{if(s.phase==='analyzing'){s.end=0;s.manual=true;s.noSig=0}});
+  toast(`Analyse lancée sur ${list.length} marché${list.length>1?'s':''}`);step()};
+$('winSel').onchange=e=>{detailWin=+e.target.value;render()};
 const bindSet=(id,k,num)=>{const el=$(id);if(el.type==='checkbox')el.checked=settings[k];else el.value=settings[k];
   el.onchange=()=>{settings[k]=el.type==='checkbox'?el.checked:(num?+el.value:el.value);save('vs_settings',settings)}};
 bindSet('aSound','sound');bindSet('aVib','vib');bindSet('aPinned','pinned');bindSet('aMin','min',true);
