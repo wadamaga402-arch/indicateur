@@ -158,7 +158,7 @@ dialog ol{padding-left:18px;margin:8px 0}
   <button class="tab" data-mode="risefall">📈 Rise / Fall</button>
 </nav>
 
-<div class="offline" id="offline">Flux Deriv injoignable — reconnexion en cours… Si ça reste bloqué, cette page est ouverte dans un aperçu qui bloque les connexions externes : ouvre la version hébergée du site.</div>
+<div class="offline" id="offline">Flux Deriv injoignable — reconnexion en cours… (Dans l'app Claude, la connexion est bloquée : ouvre le lien dans Safari ou Chrome.)<div class="mono" id="diag" style="margin-top:6px;font-size:11px;opacity:.85"></div></div>
 
 <section id="topTitle">
   <h1 id="title">Volatility Predictions</h1>
@@ -266,26 +266,38 @@ function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 const $=id=>document.getElementById(id);
 
 /* ---------- WebSocket ---------- */
+const ENDPOINTS=['wss://api.derivws.com/trading/v1/options/ws/public',WS_URL,'wss://ws.binaryws.com/websockets/v3?app_id=1089'];
+let epIdx=0, subMap={}, lastErr='', watchdog;
+function diag(t){lastErr=t;$('diag').textContent=t}
+function nextEndpoint(why){diag(why+' → essai adresse suivante');clearTimeout(watchdog);epIdx=(epIdx+1)%ENDPOINTS.length;try{ws.onclose=null;ws.close()}catch(e){}setConn(false);setTimeout(connect,800)}
 function connect(){
-  try{ws=new WebSocket(WS_URL)}catch(e){setConn(false);return setTimeout(connect,4000)}
-  ws.onopen=()=>{setConn(true);MARKETS.forEach((m,i)=>ws.send(JSON.stringify({ticks_history:m.s,count:1000,end:'latest',style:'ticks',subscribe:1,req_id:i+1})));};
+  const url=ENDPOINTS[epIdx]; diag('Connexion à '+url.replace('wss://','').split('?')[0]+'…');
+  try{ws=new WebSocket(url)}catch(e){return nextEndpoint('Erreur : '+e.message)}
+  subMap={};
+  watchdog=setTimeout(()=>{if(!Object.values(st).some(s=>s.live))nextEndpoint('Aucune donnée reçue en 10 s')},10000);
+  ws.onopen=()=>{diag('Connecté à '+url.replace('wss://','').split('?')[0]+', chargement des ticks…');MARKETS.forEach((m,i)=>ws.send(JSON.stringify({ticks_history:m.s,count:1000,end:'latest',style:'ticks',subscribe:1,req_id:i+1})));};
   ws.onmessage=e=>{
-    const d=JSON.parse(e.data); lastMsg=Date.now();
-    if(d.error){console.warn(d.error);return}
-    if(d.msg_type==='history'){
-      const s=st[d.echo_req.ticks_history]; if(!s)return;
+    let d; try{d=JSON.parse(e.data)}catch(x){return} lastMsg=Date.now();
+    const sym=(d.echo_req&&d.echo_req.ticks_history)||(d.req_id&&MARKETS[d.req_id-1]&&MARKETS[d.req_id-1].s)||(d.subscription&&subMap[d.subscription.id])||(d.tick&&d.tick.symbol);
+    if(d.error){diag('Deriv : '+(d.error.message||d.error.code)+(sym?' ('+sym+')':''));return}
+    if(d.msg_type==='history'||d.history){
+      const s=st[sym]; if(!s||!d.history)return;
+      if(d.subscription&&d.subscription.id)subMap[d.subscription.id]=sym;
+      setConn(true); diag('');
       s.pip=d.pip_size??s.pip; s.prices=d.history.prices.map(Number);
       s.digits=s.prices.map(p=>dig(p,s.pip)); s.live=true; render();
-    }else if(d.msg_type==='tick'){
-      const t=d.tick,s=st[t.symbol]; if(!s)return;
+    }else if(d.msg_type==='tick'||d.tick){
+      const t=d.tick,s=st[t.symbol||sym]; if(!s||t.quote==null)return;
       if(t.pip_size!=null)s.pip=t.pip_size;
       const q=Number(t.quote); s.prices.push(q); s.digits.push(dig(q,s.pip)); s.live=true;
       if(s.prices.length>1200){s.prices.splice(0,200);s.digits.splice(0,200)}
       onTick(s,q);
     }
   };
-  ws.onclose=()=>{setConn(false);setTimeout(connect,3000)};
-  ws.onerror=()=>{try{ws.close()}catch(e){}};
+  ws.onclose=ev=>{clearTimeout(watchdog);setConn(false);
+    if(!Object.values(st).some(s=>s.live))nextEndpoint('Connexion refusée (code '+ev.code+')');
+    else{diag('Connexion coupée, reconnexion…');setTimeout(connect,3000)}};
+  ws.onerror=()=>{};
 }
 setInterval(()=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify({ping:1}))},25000);
 function dig(p,pip){const s=Number(p).toFixed(pip);return +s[s.length-1]}
