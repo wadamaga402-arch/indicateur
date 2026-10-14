@@ -1,4 +1,11 @@
-# VolScope — moteur d'analyse Matches / Differs (Deriv)
+# VolScope & Profit Analysis Engine (Deriv)
+
+## Profit Analysis Engine (BUY / SELL / NO TRADE) — `engine.html`
+- `trend-engine.js` (calculs), `deriv-feed.js` (données Deriv), `pa-engine.js` (contrôleur), `pa-widget.js` (interface).
+- Intégration dans un autre site : voir `INTEGRATION.md`.
+- Tests : `node --test tests/*.test.js` (31 tests).
+
+# Scanner Matches / Differs
 
 - `scanner.html` : le scanner (interface + moteur en direct, backtest, profils, démo).
 - `engine.js` : le moteur (fonctions pures, sans réseau, testable).

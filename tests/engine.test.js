@@ -114,3 +114,9 @@ test('vérification de flux', () => {
   assert.equal(E.checkFeed([...ep].reverse(), now, 1).ok, false);         // horodatage incohérent
   assert.equal(E.checkFeed(ep.map((e, i) => now - 100 + 2 * i), now, 1).ok, false); // mauvaise cadence
 });
+
+test('tests multiples (chiffres) : faux positifs ≤ 10 % sur 40 séries au hasard', () => {
+  let fp = 0;
+  for (let k = 0; k < 40; k++) if (E.optimize(randDigits(10000), { MATCH: 8.3, DIFF: 1.09 }).validated.length) fp++;
+  assert.ok(fp <= 4, `faux positifs : ${fp}/40`);
+});

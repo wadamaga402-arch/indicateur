@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Profit Analysis Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07130d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#07130d}}
+:root[data-theme="dark"]{--bg:#07130d}
+html,body{margin:0;background:radial-gradient(ellipse at top,#0f2a1c,var(--bg) 60%) fixed;background-color:var(--bg)}
+body{padding:14px 16px 60px;overflow-x:hidden}
+.nav{max-width:1100px;margin:0 auto 12px;font:12px Poppins,system-ui,sans-serif}
+.nav a{color:#86a594;margin-right:14px}
+</style>
+</head>
+<body>
+<div class="nav"><a href="index.html">VolScope</a><a href="scanner.html">Scanner Matches/Differs</a></div>
+<div id="pa-engine"></div>
+<script src="trend-engine.js"></script>
+<script src="deriv-feed.js"></script>
+<script src="pa-engine.js"></script>
+<script src="pa-widget.js"></script>
+<script>PAWidget.mount(document.getElementById('pa-engine'));</script>
+</body>
+</html>

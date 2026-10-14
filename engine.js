@@ -108,6 +108,21 @@
     return g;
   };
 
+
+  // Quantile de la loi normale (algorithme d'Acklam, précision ~1e-9).
+  function normInv(p) {
+    const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    const pl = 0.02425; let q, r;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p > 1 - pl) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    q = p - 0.5; r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+  E.normInv = normInv;
+
   /* ---------- Backtest ---------- */
   // Décision au tick t avec les chiffres [t-W+1 .. t] uniquement, résultat = chiffre t+1 (pas de regard vers le futur).
   // Trades simulés sur les indices de décision t dans [from, to-2].
@@ -142,17 +157,20 @@
     opts = opts || {};
     const split = Math.floor(digits.length * (opts.split || 0.7));
     const minTrades = opts.minTrades || 300;
-    const rows = E.strategyGrid().map(strat => {
+    const grid = E.strategyGrid();
+    const zCrit = normInv(1 - 0.05 / grid.length); // correction de Bonferroni (tests multiples)
+    const rows = grid.map(strat => {
       const pr = payouts[strat.contract];
       const train = E.backtest(digits, strat, pr, 0, split);
       const test = E.backtest(digits, strat, pr, split, digits.length);
-      const validated = train.trades >= minTrades && train.ev > 0 && test.trades >= minTrades && test.lo > 0;
+      test.loAdj = test.ev - zCrit * test.se;
+      const validated = train.trades >= minTrades && train.ev > 0 && test.trades >= minTrades && test.loAdj > 0;
       return { strat, name: E.stratName(strat), train, test, validated };
     });
     // Classement par espérance d'entraînement ; une stratégie avec trop peu de contrats n'est pas classable.
     const key = r => (r.train.trades >= minTrades ? r.train.ev : -1e9 + r.train.trades);
     rows.sort((a, b) => key(b) - key(a));
-    return { split, n: digits.length, rows, best: rows[0], validated: rows.filter(r => r.validated), tested: rows.length };
+    return { split, n: digits.length, rows, zCrit, best: rows[0], validated: rows.filter(r => r.validated), tested: rows.length };
   };
 
   /* ---------- Vérification des données ---------- */
