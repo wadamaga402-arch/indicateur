@@ -153,7 +153,19 @@ a.lnk{color:var(--g);font-size:12px}
   <div class="hist" id="hist"></div>
 </div>
 
-<div class="truth">⚠️ Les indices de volatilité Deriv sont tirés au hasard : chaque chiffre a ~10 % de chances de sortir, quel que soit le scan. Un site qui affiche « 98 % de confiance » sur Matches ne dit pas la vérité. Ici tu vois la vraie fréquence, la vraie chance de gagner, et le résultat réel de chaque signal.<br><a class="lnk" href="index.html">← Retour à VolScope</a> · <a class="lnk" href="scanner-moteur.html">Scanner moteur complet</a> · <a class="lnk" href="engine.html">Profit Analysis Engine</a></div>
+<div class="panel" id="engBox">
+  <div class="sig-h"><b>⚙️ Moteur d'analyse</b><span class="mono" style="font-size:11px;color:var(--mut)" id="engSrc"></span></div>
+  <div class="stats">
+    <div class="st"><b id="eTicks">–</b><span>Ticks analysés</span></div>
+    <div class="st"><b id="eM">–</b><span>Matches mesuré</span></div>
+    <div class="st"><b id="eD">–</b><span>Differs mesuré</span></div>
+    <div class="st"><b id="eBM">–</b><span>Seuil Matches</span></div>
+    <div class="st"><b id="eBD">–</b><span>Seuil Differs</span></div>
+    <div class="st"><b id="eV">–</b><span>Verdict</span></div>
+  </div>
+  <div class="small" id="eNote" style="font-size:11px;color:var(--mut);margin-top:10px;line-height:1.5"></div>
+  <div style="margin-top:8px;font-size:12px"><a class="lnk" href="index.html">← VolScope</a> · <a class="lnk" href="scanner-moteur.html">Scanner moteur complet</a> · <a class="lnk" href="engine.html">Profit Analysis Engine</a></div>
+</div>
 
 <div class="overlay" id="ov"><div class="ov"><div class="spin"></div><small>ANALYZING</small><h3>Analyse du marché Matches</h3><p>Lecture de la distribution des chiffres…</p></div></div>
 
@@ -196,7 +208,7 @@ function subscribe(){
 const side=new Map(); let measHist={}, measBusy=null;
 function rq(o){return new Promise((res,rej)=>{if(!ws||ws.readyState!==1)return rej(new Error('non connecté'));const id=900000+(++reqN);o.req_id=id;side.set(id,{res,rej});ws.send(JSON.stringify(o));setTimeout(()=>{if(side.has(id)){side.delete(id);rej(new Error('délai'))}},30000)})}
 async function measure(){
-  const s=sym; if(measHist[s]||measBusy===s)return applyMeasure(); measBusy=s;
+  const s=sym; if(measHist[s]||measBusy===s)return applyMeasure(); measBusy=s; renderEngine();
   try{
     let P=[],end='latest',pp=pip;
     while(P.length<10000){const want=Math.min(5000,10000-P.length);const d=await rq({ticks_history:s,count:want,end,style:'ticks'});
@@ -211,7 +223,22 @@ function measured(type){
   const r=E.backtest(H,st,1); const ci=E.wilson(r.wins,r.trades);
   return {p:r.winRate*100,lo:ci[0]*100,hi:ci[1]*100,n:r.trades};
 }
-function applyMeasure(){if(rec)showRec(pick(rec.type));if(sig&&!pending)renderSigProb(sig)}
+function applyMeasure(){if(rec)showRec(pick(rec.type));if(sig&&!pending)renderSigProb(sig);renderEngine()}
+function renderEngine(){
+  const H=measHist[sym], W=+$('win').value;
+  $('engSrc').textContent=MK.find(m=>m[0]===sym)[1];
+  const pm=+$('payM').value||0, pd=+$('payD').value||0;
+  const bm=pm>0?100/(1+pm):null, bd=pd>0?100/(1+pd):null;
+  $('eBM').textContent=bm?bm.toFixed(1)+' %':'–'; $('eBD').textContent=bd?bd.toFixed(1)+' %':'–';
+  if(!H){$('eTicks').textContent=measBusy===sym?'…':'–';$('eM').textContent=$('eD').textContent=$('eV').textContent='–';$('eNote').textContent=measBusy===sym?'Téléchargement de l\'historique Deriv…':'En attente des données Deriv.';return}
+  const m=measured('match'), d=measured('diff');
+  $('eTicks').textContent=H.length.toLocaleString('fr-FR');
+  $('eM').textContent=m.p.toFixed(1)+' %'; $('eD').textContent=d.p.toFixed(1)+' %';
+  const okM=bm&&m.lo>bm, okD=bd&&d.lo>bd;
+  $('eM').className=okM?'win':(bm&&m.hi<bm?'loss':''); $('eD').className=okD?'win':(bd&&d.hi<bd?'loss':'');
+  $('eV').textContent=okM||okD?'✔ GO':'✘ ATTENDRE'; $('eV').className=okM||okD?'win':'loss';
+  $('eNote').innerHTML=`Règle testée sur ${m.n.toLocaleString('fr-FR')} trades réels (période ${W} ticks). Matches : ${m.lo.toFixed(1)}–${m.hi.toFixed(1)} % · Differs : ${d.lo.toFixed(1)}–${d.hi.toFixed(1)} % (95 % de confiance). GO uniquement si la chance mesurée dépasse le seuil de rentabilité.`;
+}
 function chanceText(r){return r.meas?r.meas.p.toFixed(1)+' %':(measBusy===sym?'mesure…':'≈ '+r.prob+' %')}
 function renderSigProb(r){$('sP').textContent=chanceText(r)}
 function renderPrice(dir){
@@ -320,13 +347,14 @@ $('botBtn').onclick=()=>{
 /* ----- events ----- */
 $('sym').onchange=e=>{sym=e.target.value;sv('sc_sym',sym);live=false;pending=null;$('pVal').textContent='—';$('ov').classList.add('on');setTimeout(()=>$('ov').classList.remove('on'),1500);subscribe();renderPrice(0)};
 $('win').onchange=()=>{renderDist();applyMeasure()};
+$('payM').addEventListener('change',renderEngine);$('payD').addEventListener('change',renderEngine);
 $('tt').onchange=()=>{if(rec)showRec(pick($('tt').value))};
 $('scanBtn').onclick=scan;
 document.querySelectorAll('[data-seg]').forEach(b=>b.onclick=()=>{seg=b.dataset.seg;document.querySelectorAll('[data-seg]').forEach(x=>x.classList.toggle('on',x===b))});
 document.querySelectorAll('[data-gen]').forEach(b=>b.onclick=()=>gen(b.dataset.gen));
 $('auto').onchange=e=>{clearInterval(autoT);if(e.target.checked){gen('auto');autoT=setInterval(()=>gen('auto'),30000)}};
 $('reset').onclick=()=>{hist=[];sv('sc_hist',hist);renderHist()};
-renderHist(); renderPrice(0); connect();
+renderHist(); renderPrice(0); renderEngine(); connect();
 </script>
 </body>
 </html>
