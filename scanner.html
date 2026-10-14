@@ -206,7 +206,7 @@ const fmt$=v=>(v>=0?'+':'')+v.toFixed(2);
 const pct=(v,d=1)=>(v*100).toFixed(d)+' %';
 
 /* ================= PROFILS ================= */
-const DEF_PROFILE=()=>({id:'p'+Date.now(),name:'Prudent',symbol:'1HZ100V',strat:{contract:'MATCH',rule:'hot',window:200,zMin:2},stake:1,maxContracts:30,lossLimit:10,onlyValidated:true,autoPaper:false,history:[],session:1});
+const DEF_PROFILE=()=>({id:'p'+Date.now(),name:'Prudent',symbol:'1HZ100V',strat:{contract:'MATCH',rule:'hot',window:200,zMin:0},stake:1,maxContracts:30,lossLimit:10,onlyValidated:true,autoPaper:false,history:[],session:1});
 let profiles=ld('vs_profiles',null); if(!profiles||!profiles.length){profiles=[DEF_PROFILE()];}
 let activeId=ld('vs_active',profiles[0].id); if(!profiles.find(p=>p.id===activeId))activeId=profiles[0].id;
 const P=()=>profiles.find(p=>p.id===activeId);
@@ -275,6 +275,7 @@ async function loadPayouts(){
     }catch(e){payoutSrc='indisponible : '+e.message}
   }
   renderPay();evaluate();
+  const b=bt[sym]; if(payouts.MATCH&&payouts.DIFF&&(!b||Date.now()-b.date>6*3600e3))runBacktest(10000,true);
 }
 function setConn(s,t){$('dot').className='dot'+(s==='on'?' on':s==='warn'?' warn':'');$('connTxt').textContent=t}
 function verifyMsg(h){$('verify').innerHTML=h}
@@ -364,17 +365,28 @@ function detailHTML(r){
   <span>Validation</span><b>${r.row?(r.validated?'<span class="badge b-ok">VALIDÉE</span>':'<span class="badge b-no">NON VALIDÉE</span>'):'<span class="badge b-na">NON TESTÉE</span>'}</b>
   </div>`;
 }
+let measuring=null;
 function renderRec(r){
   const box=$('recBox');
-  if(r.status==='WAIT'){
-    box.innerHTML=`<div class="rec wait"><div class="top"><div class="digit wait">⏸</div><div><div class="k" style="color:var(--y)">Moteur</div><h3>ATTENDRE — CONDITIONS INSUFFISANTES</h3><p>${esc(r.why)}</p></div></div>${r.payout?detailHTML(r):''}
-    <p class="small" style="margin-top:10px">Limites : chaque tick est tiré au hasard ; une fréquence passée élevée ne rend pas un chiffre plus probable. Les résultats passés ne garantissent rien.</p></div>`;
-  }else{
-    const m=r.strat.contract==='MATCH';
-    box.innerHTML=`<div class="rec"><div class="top"><div class="digit ${m?'':'diff'}">${r.barrier}</div><div><div class="k">✦ Recommandation du moteur</div><h3>Trade <span style="color:${m?'var(--g)':'var(--r)'}">${m?'MATCH':'DIFFER'} ${r.barrier}</span></h3>
-    <p>Raison : ${r.strat.rule==='last'?'dernier chiffre sorti':`chiffre ${r.strat.rule==='hot'?'le plus':'le moins'} fréquent sur ${r.strat.window} ticks avec |z| ≥ ${r.strat.zMin}`}${r.validated?', règle validée hors échantillon':''}.</p></div></div>${detailHTML(r)}
-    <p class="small" style="margin-top:10px">Incertitude : ${r.probCI?`la vraie probabilité se situe probablement entre ${pct(r.probCI[0])} et ${pct(r.probCI[1])}`:'probabilité non mesurée'} ; une série de pertes reste possible.</p></div>`;
-  }
+  const has=r.barrier!=null, m=r.strat&&r.strat.contract==='MATCH', go=r.status==='GO';
+  const meas=r.probCI?{p:r.prob,lo:r.probCI[0],hi:r.probCI[1],n:r.row?r.row.test.trades:0}:null;
+  const theo=r.strat?E.baseProb(r.strat.contract):0.1;
+  const chanceTxt=meas?`${pct(meas.p)}`:(measuring===P().symbol?'mesure en cours…':`≈ ${pct(theo,0)} (théorique)`);
+  const chanceW=(meas?meas.p:theo)*100;
+  const verdict=go?`<span class="badge b-ok">✔ VALIDÉ</span> espérance ${fmt$(r.ev)} $ par contrat`
+    :`<span class="badge b-na">⏸ ATTENDRE</span> ${esc(r.why)}`;
+  box.innerHTML=`<div class="rec ${go?'':'wait'}">
+   <div class="top"><div class="digit ${has?(m?'':'diff'):'wait'}">${has?r.barrier:'⏸'}</div>
+    <div><div class="k" style="${go?'':'color:var(--y)'}">✦ ${go?'Chiffre recommandé':'Chiffre analysé'}</div>
+    <h3>${has?`Trade <span style="color:${m?'var(--g)':'var(--r)'}">${m?'MATCH':'DIFFER'} ${r.barrier}</span>`:'ATTENDRE'}</h3>
+    <p>${has?`Le chiffre ${r.barrier} est sorti ${pct(r.freq)} du temps sur les ${r.n} derniers ticks (${r.strat.rule==='hot'?'le plus fréquent':r.strat.rule==='cold'?'le moins fréquent':'dernier sorti'}).`:esc(r.why)}</p></div></div>
+   ${has?`<div class="meter" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;font-size:10px;letter-spacing:1px;color:var(--mut);text-transform:uppercase"><span>Fréquence observée</span><span>${pct(r.freq)}</span></div><div class="bar"><i style="width:${Math.min(100,r.freq*500)}%"></i></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;letter-spacing:1px;color:var(--mut);text-transform:uppercase"><span>Chance mesurée sur Deriv</span><span>${chanceTxt}</span></div><div class="bar"><i style="width:${chanceW}%;background:var(--y)"></i></div>
+    <p class="small">${meas?`Mesurée sur ${meas.n} trades réels jamais vus (historique Deriv de ${bt[P().symbol].n} ticks) : entre ${pct(meas.lo)} et ${pct(meas.hi)} avec 95 % de confiance. Pour être rentable il faut plus de ${pct(1/r.payout)}.`:'La chance réelle se mesure sur l\'historique Deriv de cet indice.'}</p></div>`:''}
+   <p class="small" style="margin-top:8px">${verdict}</p>
+   ${r.payout?`<details style="margin-top:8px"><summary>Détails du calcul</summary>${detailHTML(r)}</details>`:''}
+  </div>`;
 }
 
 /* ================= SCAN (animation + analyse réelle) ================= */
@@ -453,9 +465,12 @@ async function fetchHistory(sym,total,onProg){
   for(let i=1;i<allT.length;i++)if(allT[i]<=allT[i-1])throw new Error('historique non chronologique');
   return {prices:allP,times:allT,pip:pipH};
 }
-async function runBacktest(){
-  const sym=P().symbol,total=+$('btN').value;
-  if(!payouts.MATCH||!payouts.DIFF){$('btOut').innerHTML='<span class="ko">Paiements Deriv indisponibles : impossible d\'évaluer l\'espérance.</span>';return}
+let btRunning=false;
+async function runBacktest(totalOverride,auto){
+  if(btRunning)return; btRunning=true;
+  const sym=P().symbol,total=totalOverride||+$('btN').value;
+  measuring=auto?sym:null; if(auto)evaluate();
+  if(!payouts.MATCH||!payouts.DIFF){$('btOut').innerHTML='<span class="ko">Paiements Deriv indisponibles : impossible d\'évaluer l\'espérance.</span>';btRunning=false;measuring=null;return}
   $('btBtn').disabled=true;$('btOut').textContent='Téléchargement de l\'historique Deriv…';
   try{
     const h=await fetchHistory(sym,total,p=>{$('btProg').style.width=(p*80)+'%'});
@@ -467,7 +482,7 @@ async function runBacktest(){
     bt[sym]={date:Date.now(),n:dg.length,from:h.times[0],to:h.times.at(-1),payouts:{...payouts},chi:cs,rows:res.rows.map(r=>({strat:r.strat,name:r.name,train:r.train,test:r.test,validated:r.validated}))};
     sv('vs_bt',bt);renderBacktest();evaluate();
   }catch(e){$('btOut').innerHTML='<span class="ko">Échec : '+esc(e.message)+'</span>'}
-  $('btBtn').disabled=false;
+  $('btBtn').disabled=false; btRunning=false; measuring=null; evaluate();
 }
 function renderBacktest(){
   const r=bt[P().symbol];$('btMarket').textContent=P().symbol;
