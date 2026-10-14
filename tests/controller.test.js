@@ -119,6 +119,14 @@ test('backtest via Deriv + validation : marché au hasard => NO TRADE en mode «
   await e.stop();
 });
 
+test('historique : Deriv plafonne à 1000 ticks par demande -> pagination jusqu\'à 20000', async () => {
+  const fake = makeFake({ maxPerRequest: 1000 }); const e = engine(fake);
+  await e.feed.connect(); const h = await e.feed.history('1HZ100V', 20000);
+  assert.equal(h.prices.length, 20000);
+  for (let i = 1; i < h.times.length; i++) assert.ok(h.times[i] > h.times[i - 1]);
+  e.feed.close();
+});
+
 test('persistance : réglages et historique rechargés', async () => {
   const fake = makeFake(); const store = mem();
   const e = new PAEngine({ WebSocketImpl: fake.WS, storage: store, now: fake.now });

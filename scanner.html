@@ -211,8 +211,8 @@ async function measure(){
   const s=sym; if(measHist[s]||measBusy===s)return applyMeasure(); measBusy=s; renderEngine();
   try{
     let P=[],end='latest',pp=pip;
-    while(P.length<10000){const want=Math.min(5000,10000-P.length);const d=await rq({ticks_history:s,count:want,end,style:'ticks'});
-      const pr=d.history.prices.map(Number),tm=d.history.times.map(Number);if(d.pip_size!=null)pp=d.pip_size;if(!pr.length)break;P=pr.concat(P);end=tm[0]-1;if(pr.length<want)break}
+    let pages=0;while(P.length<10000&&pages++<30){const want=Math.min(5000,10000-P.length);const d=await rq({ticks_history:s,count:want,end,style:'ticks'});
+      const pr=d.history.prices.map(Number),tm=d.history.times.map(Number);if(d.pip_size!=null)pp=d.pip_size;if(!pr.length||!tm.length)break;if(end!=='latest'&&tm[0]>=end)break;P=pr.concat(P);end=tm[0]-1;renderEngineProgress(P.length)}
     measHist[s]=P.map(x=>E.lastDigit(x,pp));
   }catch(e){}
   measBusy=null; applyMeasure();
@@ -224,6 +224,7 @@ function measured(type){
   return {p:r.winRate*100,lo:ci[0]*100,hi:ci[1]*100,n:r.trades};
 }
 function applyMeasure(){if(rec)showRec(pick(rec.type));if(sig&&!pending)renderSigProb(sig);renderEngine()}
+function renderEngineProgress(n){if(measBusy===sym){$('eTicks').textContent=n.toLocaleString('fr-FR');$('eNote').textContent='Téléchargement de l\'historique Deriv… '+n+' / 10 000'}}
 function renderEngine(){
   const H=measHist[sym], W=+$('win').value;
   $('engSrc').textContent=MK.find(m=>m[0]===sym)[1];

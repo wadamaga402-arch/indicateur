@@ -117,16 +117,17 @@
       try { if (s.id) await this.request({ forget: s.id }, 5000); else await this.request({ forget_all: 'ticks' }, 5000); } catch (e) { /* déjà fermé */ }
     }
     async history(symbol, total, onProgress) {
-      let prices = [], times = [], end = 'latest', pip = null;
-      while (prices.length < total) {
+      let prices = [], times = [], end = 'latest', pip = null, pages = 0;
+      while (prices.length < total && pages++ < 100) {
         const want = Math.min(5000, total - prices.length);
         const d = await this.request({ ticks_history: symbol, count: want, end, style: 'ticks' }, 30000);
         const pr = d.history.prices.map(Number), tm = (d.history.times || []).map(Number);
         if (d.pip_size != null) pip = Number(d.pip_size);
         if (!pr.length || !tm.length) break;
+        if (end !== 'latest' && tm[0] >= end) break;            // pas de progression : on s'arrête
         prices = pr.concat(prices); times = tm.concat(times); end = tm[0] - 1;
         if (onProgress) onProgress(prices.length / total);
-        if (pr.length < want) break; // plus d'historique disponible
+        // Deriv peut plafonner le nombre de ticks par demande : on continue tant qu'on progresse.
       }
       for (let i = 1; i < times.length; i++) if (times[i] <= times[i - 1]) throw new Error('historique non chronologique');
       return { prices, times, pip };

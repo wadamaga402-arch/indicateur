@@ -455,12 +455,13 @@ function note(t,bad){$('riskMsg').innerHTML=`<div class="alert ${bad?'al-r':'al-
 /* ================= BACKTEST ================= */
 async function fetchHistory(sym,total,onProg){
   let allP=[],allT=[],end='latest',pipH=pip;
-  while(allP.length<total){
+  let pages=0;
+  while(allP.length<total&&pages++<100){
     const d=await rq({ticks_history:sym,count:Math.min(5000,total-allP.length),end,style:'ticks'},30000);
     const pr=d.history.prices.map(Number),tm=d.history.times.map(Number);pipH=d.pip_size??pipH;
-    if(!pr.length)break;
+    if(!pr.length||!tm.length)break;
+    if(end!=='latest'&&tm[0]>=end)break;
     allP=pr.concat(allP);allT=tm.concat(allT);end=tm[0]-1;onProg(allP.length/total);
-    if(pr.length<10)break;
   }
   for(let i=1;i<allT.length;i++)if(allT[i]<=allT[i-1])throw new Error('historique non chronologique');
   return {prices:allP,times:allT,pip:pipH};

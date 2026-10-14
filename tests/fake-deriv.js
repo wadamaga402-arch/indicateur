@@ -31,7 +31,9 @@ function makeFakeDeriv(opts) {
       }
       if (d.forget || d.forget_all) { clearInterval(this.iv); this.iv = null; return this._reply({ msg_type: 'forget', req_id: d.req_id, forget: 1 }); }
       if (d.ticks_history) {
-        const n = ctl.historyLen || d.count, end = d.end === 'latest' ? clock.t : d.end;
+        const end = d.end === 'latest' ? clock.t : d.end;
+        let n = Math.min(d.count, opts.maxPerRequest || 5000);            // plafond par demande (comme Deriv)
+        if (ctl.historyLen) n = Math.max(0, Math.min(n, end - (clock.t - ctl.historyLen)));  // historique limité
         const times = [], prices = []; for (let i = n - 1; i >= 0; i--) { times.push(end - i); prices.push(nextPrice()); }
         const msg = { msg_type: 'history', req_id: d.req_id, pip_size: 2, history: { prices, times } };
         if (d.subscribe) { msg.subscription = { id: 'sub-' + d.req_id }; this.subId = msg.subscription.id; this.sym = d.ticks_history; }
